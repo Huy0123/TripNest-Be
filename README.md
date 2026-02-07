@@ -1,3 +1,4 @@
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
@@ -21,78 +22,137 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+# Trip Nest Backend
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Trip Nest BE is a robust backend API for a travel booking platform, built with the [NestJS](https://github.com/nestjs/nest) framework. It provides comprehensive features for managing tours, bookings, users, payments, and real-time communications.
 
-## Project setup
+## Features
 
-```bash
-$ npm install
+-   **Authentication & Authorization**: Secure JWT-based authentication with Passport strategies (Local, Google, etc.).
+-   **User Management**: User profiles, roles, and permissions.
+-   **Tours & Location Management**: Create and manage travel packages and destinations.
+-   **Booking System**: Complete booking flow with payment integration.
+-   **Reviews & Ratings**: User feedback system for tours.
+-   **Payments**: Integrated payment processing (Stripe/PayPal/etc. - check implementation).
+-   **Real-time Chat**: Socket.io based chat for support or user interaction.
+-   **Notifications**: Real-time notifications system.
+-   **Email Service**: Transactional emails using Nodemailer and BullMQ for queuing.
+-   **Caching**: Redis-based caching for performance optimization.
+-   **Database**: PostgreSQL with TypeORM for data persistence.
+
+## Tech Stack
+
+-   **Framework**: NestJS
+-   **Database**: PostgreSQL
+-   **ORM**: TypeORM
+-   **Caching/Queue**: Redis, BullMQ
+-   **Real-time**: Socket.io
+-   **Containerization**: Docker & Docker Compose
+
+## Prerequisites
+
+Ensure you have the following installed on your local machine:
+
+-   [Node.js](https://nodejs.org/) (LTS version recommended)
+-   [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
+
+## Installation
+
+1.  Clone the repository:
+    ```bash
+    git clone <repository-url>
+    cd trip-nest-be
+    ```
+
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+
+## Configuration
+
+Duplicate the `.env.example` file (if available) or create a `.env` file in the root directory based on the following template:
+
+```env
+# Server
+PORT=3000
+
+# Database (PostgreSQL)
+HOST=localhost
+PORT_DB=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=travel_db
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# JWT
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRATION=3600s
+
+# Other configurations (Mail, Cloudinary, Payment keys etc.)
+# ...
 ```
 
-## Compile and run the project
+## Running the Application
+
+1.  **Start Infrastructure (Database & Redis)**
+    Use Docker Compose to start PostgreSQL and Redis containers:
+    ```bash
+    docker-compose up -d
+    ```
+
+2.  **Start the Application**
+    
+    Development mode:
+    ```bash
+    npm run start:dev
+    ```
+
+    Production mode:
+    ```bash
+    npm run start:prod
+    ```
+
+## Database Seeding
+
+To populate the database with initial sample data (tours, locations, users, etc.):
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run seed
 ```
 
-## Run tests
+To clear the seeded data:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run seed:clear
 ```
 
-## Deployment
+## Testing
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Run the test suite to ensure everything is working correctly:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Test coverage
+npm run test:cov
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Documentation
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+-   Swagger API documentation is available at `/api` (or configured path) when the server is running.
 
 ## Support
 
 Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
 
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is [MIT licensed](LICENSE).
