@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhắc nhở chuyến du lịch - {{appName}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f7fa;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .reminder-banner {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .countdown {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .tour-card {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 8px 25px rgba(116, 185, 255, 0.3);
+        }
+
+        .tour-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .tour-title::before {
+            content: "🌟";
+            margin-right: 10px;
+        }
+
+        .checklist {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .checklist h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #27ae60;
+            border-radius: 3px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .info-card {
+            background-color: #ffffff;
+            border: 2px solid #e74c3c;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .info-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .info-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .weather-info {
+            background: linear-gradient(135deg, #00cec9 0%, #00b894 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .contact-section {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .emergency-contact {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #721c24;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white !important;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 10px 5px;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+            text-align: center;
+            display: inline-block;
+        }
+
+        .footer {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .countdown {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>{{appName}}</h1>
+            <p>Chuyến du lịch của bạn sắp bắt đầu!</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Reminder Banner -->
+            <div class="reminder-banner">
+                <h2>🎒 Sẵn sàng cho chuyến đi!</h2>
+                <div class="countdown">{{daysUntilTrip}}</div>
+                <p>ngày nữa là khởi hành</p>
+            </div>
+
+            <p style="font-size: 16px; margin-bottom: 20px;">
+                Xin chào <strong>{{customerName}}</strong>,
+            </p>
+
+            <p>
+                Chuyến du lịch mà bạn đã đặt sắp bắt đầu rồi! Chúng tôi gửi email này để nhắc nhở
+                và giúp bạn chuẩn bị tốt nhất cho hành trình sắp tới.
+            </p>
+
+            <!-- Tour Information -->
+            <div class="tour-card">
+                <div class="tour-title">{{tourName}}</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div>
+                        <strong>📅 Ngày khởi hành:</strong><br>
+                        {{departureDate}}
+                    </div>
+                    <div>
+                        <strong>⏰ Thời gian tập trung:</strong><br>
+                        {{departureTime}}
+                    </div>
+                    <div>
+                        <strong>📍 Điểm tập trung:</strong><br>
+                        {{meetingPoint}}
+                    </div>
+                    <div>
+                        <strong>🕐 Thời gian:</strong><br>
+                        {{duration}} ngày {{nights}} đêm
+                    </div>
+                </div>
+            </div>
+
+            <!-- Important Information Grid -->
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-icon">🎫</div>
+                    <div class="info-title">Mã đặt tour</div>
+                    <div class="info-value">{{bookingCode}}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">👥</div>
+                    <div class="info-title">Số lượng khách</div>
+                    <div class="info-value">{{totalGuests}} người</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">👨‍🏫</div>
+                    <div class="info-title">Hướng dẫn viên</div>
+                    <div class="info-value">{{guideName}}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">📞</div>
+                    <div class="info-title">Liên hệ HDV</div>
+                    <div class="info-value">{{guidePhone}}</div>
+                </div>
+            </div>
+
+            <!-- Weather Information -->
+            {{#if weatherInfo}}
+            <div class="weather-info">
+                <h3 style="margin-bottom: 15px;">🌤️ Thông tin thời tiết dự báo</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+                    {{#each weatherInfo}}
+                    <div>
+                        <div style="font-size: 18px;">{{this.icon}}</div>
+                        <div><strong>{{this.date}}</strong></div>
+                        <div>{{this.temp}}°C</div>
+                        <div style="font-size: 12px;">{{this.description}}</div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            {{/if}}
+
+            <!-- Preparation Checklist -->
+            <div class="checklist">
+                <h3>📋 Danh sách chuẩn bị</h3>
+
+                <div class="checklist-item">
+                    <div class="checkbox">✓</div>
+                    <div>
+                        <strong>Giấy tờ tùy thân</strong><br>
+                        <span style="color: #666; font-size: 14px;">CMND/Căn cước/Hộ chiếu
+                            ({{requiredDocuments}})</span>
+                    </div>
+                </div>
+
+                <div class="checklist-item">
+                    <div class="checkbox">✓</div>
+                    <div>
+                        <strong>Quần áo phù hợp</strong><br>
+                        <span style="color: #666; font-size: 14px;">Theo thời tiết và hoạt động tour</span>
+                    </div>
+                </div>
+
+                <div class="checklist-item">
+                    <div class="checkbox">✓</div>
+                    <div>
+                        <strong>Thuốc cá nhân</strong><br>
+                        <span style="color: #666; font-size: 14px;">Thuốc thường xuyên sử dụng, thuốc say xe/máy
+                            bay</span>
+                    </div>
+                </div>
+
+                <div class="checklist-item">
+                    <div class="checkbox">✓</div>
+                    <div>
+                        <strong>Thiết bị điện tử</strong><br>
+                        <span style="color: #666; font-size: 14px;">Điện thoại, sạc dự phòng, máy ảnh</span>
+                    </div>
+                </div>
+
+                <div class="checklist-item">
+                    <div class="checkbox">✓</div>
+                    <div>
+                        <strong>Tiền mặt</strong><br>
+                        <span style="color: #666; font-size: 14px;">Cho chi phí cá nhân và mua sắm</span>
+                    </div>
+                </div>
+
+                {{#if additionalItems}}
+                {{#each additionalItems}}
+                <div class="checklist-item">
+                    <div class="checkbox">✓</div>
+                    <div>
+                        <strong>{{this.title}}</strong><br>
+                        <span style="color: #666; font-size: 14px;">{{this.description}}</span>
+                    </div>
+                </div>
+                {{/each}}
+                {{/if}}
+            </div>
+
+            <!-- Contact Information -->
+            <div class="contact-section">
+                <h4 style="margin-bottom: 15px; color: #856404;">📞 Thông tin liên hệ</h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>Hướng dẫn viên:</strong><br>
+                        {{guideName}}<br>
+                        📱 {{guidePhone}}
+                    </div>
+                    <div>
+                        <strong>Văn phòng:</strong><br>
+                        {{supportPhone}}<br>
+                        📧 {{supportEmail}}
+                    </div>
+                </div>
+
+                <!-- Emergency Contact -->
+                <div class="emergency-contact">
+                    <strong>🚨 Liên hệ khẩn cấp 24/7:</strong><br>
+                    Hotline: <strong>{{emergencyPhone}}</strong><br>
+                    Zalo/WhatsApp: <strong>{{emergencyZalo}}</strong>
+                </div>
+            </div>
+
+            <!-- Important Notes -->
+            {{#if importantNotes}}
+            <div style="background-color: #e8f5e8; border-left: 4px solid #27ae60; padding: 20px; margin: 20px 0;">
+                <h4 style="color: #27ae60; margin-bottom: 15px;">📌 Lưu ý quan trọng</h4>
+                <ul style="padding-left: 20px;">
+                    {{#each importantNotes}}
+                    <li style="margin: 8px 0;">{{this}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+            {{/if}}
+
+            <!-- Action Buttons -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{itineraryUrl}}" class="btn">
+                    📄 Xem Lịch Trình Chi Tiết
+                </a>
+                <a href="{{contactGuideUrl}}" class="btn">
+                    💬 Liên Hệ Hướng Dẫn Viên
+                </a>
+            </div>
+
+            <p style="text-align: center; font-style: italic; color: #666; margin-top: 30px;">
+                Chúc bạn có một chuyến du lịch thật vui vẻ và an toàn! 🌟✈️🏖️
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>{{appName}}</strong></p>
+            <p>{{companyAddress}}</p>
+            <p>Email: {{supportEmail}} | Hotline: {{supportPhone}}</p>
+            <p style="font-size: 12px; margin-top: 15px;">
+                © {{currentYear}} {{appName}}. Tất cả quyền được bảo lưu.
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

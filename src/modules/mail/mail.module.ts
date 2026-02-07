@@ -1,0 +1,43 @@
+import { Module } from '@nestjs/common';
+import { MailService } from './mail.service';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { BullModule } from '@nestjs/bullmq';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { EmailProcessor } from './processor/email.processor';
+import { NAME_REGISTER } from '@/enums/name-register.enum';
+import * as path from 'path';
+
+@Module({
+  imports: [
+    // Mailer Configuration
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        transport: {
+          host: configService.get<string>('MAIL_HOST'),
+          port: configService.get<number>('MAIL_PORT') || 465,
+          secure: true, // true for 465, false for other ports like 587
+          auth: {
+            user: configService.get<string>('MAIL_USER'),
+            pass: configService.get<string>('MAIL_PASS'),
+          },
+        },
+        defaults: {
+          from: `no-reply@travelife.com`,
+        },
+        template: {
+          dir: path.join(__dirname, 'templates'),
+          adapter: new HandlebarsAdapter(),
+          options: {
+            strict: true,
+          },
+        },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [MailService, EmailProcessor],
+  exports: [MailService],
+})
+export class MailModule {}

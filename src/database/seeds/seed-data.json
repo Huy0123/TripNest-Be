@@ -1,0 +1,606 @@
+{
+  "locations": [
+    {
+      "id": "loc-001",
+      "city": "Hà Nội",
+      "country": "Việt Nam"
+    },
+    {
+      "id": "loc-002",
+      "city": "Hồ Chí Minh",
+      "country": "Việt Nam"
+    },
+    {
+      "id": "loc-003",
+      "city": "Đà Nẵng",
+      "country": "Việt Nam"
+    },
+    {
+      "id": "loc-004",
+      "city": "Hạ Long",
+      "country": "Việt Nam"
+    },
+    {
+      "id": "loc-005",
+      "city": "Nha Trang",
+      "country": "Việt Nam"
+    },
+    {
+      "id": "loc-006",
+      "city": "Phú Quốc",
+      "country": "Việt Nam"
+    },
+    {
+      "id": "loc-007",
+      "city": "Hội An",
+      "country": "Việt Nam"
+    },
+    {
+      "id": "loc-008",
+      "city": "Sa Pa",
+      "country": "Việt Nam"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-001",
+      "email": "nguyenvana@example.com",
+      "firstName": "Văn A",
+      "lastName": "Nguyễn",
+      "role": "user",
+      "isActive": true,
+      "providers": ["local"],
+      "profile": {
+        "userId": "user-001",
+        "fullName": "Nguyễn Văn A",
+        "phone": "0901234567",
+        "address": "123 Đường Láng, Đống Đa, Hà Nội",
+        "avatarUrl": "https://i.pravatar.cc/150?img=1",
+        "birthDate": "1990-05-15"
+      }
+    },
+    {
+      "id": "user-002",
+      "email": "tranthib@example.com",
+      "firstName": "Thị B",
+      "lastName": "Trần",
+      "role": "user",
+      "isActive": true,
+      "providers": ["local"],
+      "profile": {
+        "userId": "user-002",
+        "fullName": "Trần Thị B",
+        "phone": "0912345678",
+        "address": "456 Nguyễn Huệ, Quận 1, TP.HCM",
+        "avatarUrl": "https://i.pravatar.cc/150?img=5",
+        "birthDate": "1992-08-20"
+      }
+    },
+    {
+      "id": "user-003",
+      "email": "lequangc@example.com",
+      "firstName": "Quang C",
+      "lastName": "Lê",
+      "role": "user",
+      "isActive": true,
+      "providers": ["google"],
+      "googleId": "google-123456",
+      "profile": {
+        "userId": "user-003",
+        "fullName": "Lê Quang C",
+        "phone": "0923456789",
+        "address": "789 Trần Phú, Hải Châu, Đà Nẵng",
+        "avatarUrl": "https://i.pravatar.cc/150?img=12",
+        "birthDate": "1988-03-10"
+      }
+    },
+    {
+      "id": "user-004",
+      "email": "phamthid@example.com",
+      "firstName": "Thị D",
+      "lastName": "Phạm",
+      "role": "user",
+      "isActive": true,
+      "providers": ["local"],
+      "profile": {
+        "userId": "user-004",
+        "fullName": "Phạm Thị D",
+        "phone": "0934567890",
+        "address": "321 Lê Lợi, Thành phố Huế",
+        "avatarUrl": "https://i.pravatar.cc/150?img=20",
+        "birthDate": "1995-11-25"
+      }
+    },
+    {
+      "id": "admin-001",
+      "email": "admin@tripnest.com",
+      "firstName": "Admin",
+      "lastName": "System",
+      "role": "admin",
+      "isActive": true,
+      "providers": ["local"],
+      "profile": {
+        "userId": "admin-001",
+        "fullName": "Administrator",
+        "phone": "0900000000",
+        "avatarUrl": "https://i.pravatar.cc/150?img=50"
+      }
+    }
+  ],
+  "tours": [
+    {
+      "id": "tour-001",
+      "name": "Tour Sapa - Chinh Phục Fansipan 3 Ngày 2 Đêm",
+      "duration": 3,
+      "guideService": "Hướng dẫn viên tiếng Việt, Anh chuyên nghiệp",
+      "type": "Family",
+      "image": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800",
+      "price": 3500000,
+      "discount": 10,
+      "rating": 4.8,
+      "reviewCount": 127,
+      "locationId": "loc-008",
+      "detail": {
+        "description": "Hành trình khám phá Sapa với cảnh quan núi non hùng vĩ, ruộng bậc thang và chinh phục đỉnh Fansipan - nóc nhà Đông Dương. Trải nghiệm văn hóa dân tộc thiểu số và thưởng thức ẩm thực địa phương đặc sắc.",
+        "itinerary": "Ngày 1: Hà Nội - Sapa - Làng Cát Cát - Chợ tình Sapa\nNgày 2: Chinh phục Fansipan bằng cáp treo - Thác Bạc - Cầu Mây\nNgày 3: Bản Tả Van - Trekking ruộng bậc thang - Về Hà Nội",
+        "inclusions": "Xe ô tô đời mới, Khách sạn 3*, Vé cáp treo Fansipan, Bữa ăn theo chương trình, Hướng dẫn viên, Bảo hiểm du lịch"
+      },
+      "images": [
+        {
+          "url": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800",
+          "caption": "Ruộng bậc thang Sapa"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1528127269322-539801943592?w=800",
+          "caption": "Đỉnh Fansipan"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800",
+          "caption": "Làng Cát Cát"
+        }
+      ]
+    },
+    {
+      "id": "tour-002",
+      "name": "Du Thuyền Vịnh Hạ Long 2 Ngày 1 Đêm",
+      "duration": 2,
+      "guideService": "Hướng dẫn viên Việt - Anh - Pháp",
+      "type": "Family",
+      "image": "https://images.unsplash.com/photo-1528127269322-539801943592?w=800",
+      "price": 4200000,
+      "discount": 15,
+      "rating": 4.9,
+      "reviewCount": 256,
+      "locationId": "loc-004",
+      "detail": {
+        "description": "Hành trình du thuyền sang trọng khám phá kỳ quan thiên nhiên thế giới Vịnh Hạ Long với hàng nghìn đảo đá vôi kỳ vĩ. Tham quan hang động, chèo kayak và thưởng thức hải sản tươi ngon.",
+        "itinerary": "Ngày 1: Hà Nội - Hạ Long - Lên du thuyền - Hang Sửng Sốt - Chèo kayak - Câu mực đêm\nNgày 2: Thái Cực quyền buổi sáng - Đảo Titop - Về Hà Nội",
+        "inclusions": "Xe đưa đón, Du thuyền 4*, Bữa ăn trên thuyền, Hướng dẫn viên, Kayak, Bảo hiểm"
+      },
+      "images": [
+        {
+          "url": "https://images.unsplash.com/photo-1528127269322-539801943592?w=800",
+          "caption": "Vịnh Hạ Long"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1555881675-ba047c447bfe?w=800",
+          "caption": "Du thuyền sang trọng"
+        }
+      ]
+    },
+    {
+      "id": "tour-003",
+      "name": "Phú Quốc - Thiên Đường Biển Đảo 4 Ngày 3 Đêm",
+      "duration": 4,
+      "guideService": "Hướng dẫn viên địa phương nhiệt tình",
+      "type": "Family",
+      "image": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800",
+      "price": 6500000,
+      "discount": 20,
+      "rating": 4.7,
+      "reviewCount": 189,
+      "locationId": "loc-006",
+      "detail": {
+        "description": "Khám phá đảo ngọc Phú Quốc với bãi biển xanh ngắt, nước trong vắt. Tour bao gồm snorkeling, câu cá, tham quan vườn tiêu, làng chài và thưởng thức hải sản tươi sống.",
+        "itinerary": "Ngày 1: TP.HCM - Phú Quốc - Bãi Sao\nNgày 2: Tour 4 đảo - Lặn ngắm san hô\nNgày 3: Vinpearl Safari - Vinpearl Land\nNgày 4: Chợ đêm - Về TP.HCM",
+        "inclusions": "Vé máy bay, Resort 4*, Bữa ăn hải sản, Vé tham quan, Hướng dẫn viên, Bảo hiểm"
+      },
+      "images": [
+        {
+          "url": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800",
+          "caption": "Bãi biển Phú Quốc"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800",
+          "caption": "Hoàng hôn trên biển"
+        }
+      ]
+    },
+    {
+      "id": "tour-004",
+      "name": "Hội An - Đà Nẵng - Bà Nà Hills 3 Ngày 2 Đêm",
+      "duration": 3,
+      "guideService": "Hướng dẫn viên chuyên nghiệp",
+      "type": "Family",
+      "image": "https://images.unsplash.com/photo-1528127269322-539801943592?w=800",
+      "price": 4800000,
+      "discount": 12,
+      "rating": 4.6,
+      "reviewCount": 213,
+      "locationId": "loc-003",
+      "detail": {
+        "description": "Khám phá phố cổ Hội An, Bà Nà Hills với Cầu Vàng nổi tiếng, và các bãi biển tuyệt đẹp của Đà Nẵng. Trải nghiệm văn hóa, ẩm thực và thiên nhiên đa dạng của miền Trung.",
+        "itinerary": "Ngày 1: Đà Nẵng - Bà Nà Hills - Cầu Vàng\nNgày 2: Ngũ Hành Sơn - Phố cổ Hội An - Thả đèn lồng\nNgày 3: Bãi biển Mỹ Khê - Chùa Linh Ứng - Về",
+        "inclusions": "Xe đưa đón, Khách sạn 4*, Vé Bà Nà Hills, Bữa ăn, Hướng dẫn viên, Bảo hiểm"
+      },
+      "images": [
+        {
+          "url": "https://images.unsplash.com/photo-1528127269322-539801943592?w=800",
+          "caption": "Cầu Vàng Bà Nà"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800",
+          "caption": "Phố cổ Hội An"
+        }
+      ]
+    },
+    {
+      "id": "tour-005",
+      "name": "Nha Trang - Đảo Vinpearl 3 Ngày 2 Đêm",
+      "duration": 3,
+      "guideService": "Hướng dẫn viên tiếng Việt - Anh",
+      "type": "Family",
+      "image": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800",
+      "price": 5200000,
+      "discount": 8,
+      "rating": 4.5,
+      "reviewCount": 167,
+      "locationId": "loc-005",
+      "detail": {
+        "description": "Tour Nha Trang với bãi biển đẹp, lặn biển ngắm san hô, tắm bùn khoáng và vui chơi tại Vinpearl Land. Thưởng thức hải sản tươi ngon và trải nghiệm cuộc sống biển đảo.",
+        "itinerary": "Ngày 1: TP.HCM/Hà Nội - Nha Trang - Check in resort\nNgày 2: Tour 4 đảo - Lặn biển - Tắm bùn khoáng\nNgày 3: Vinpearl Land - Về",
+        "inclusions": "Vé máy bay, Resort 4*, Vé Vinpearl, Bữa ăn, Hướng dẫn viên, Bảo hiểm"
+      },
+      "images": [
+        {
+          "url": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800",
+          "caption": "Bãi biển Nha Trang"
+        }
+      ]
+    },
+    {
+      "id": "tour-006",
+      "name": "Hà Nội - Tràng An - Bái Đính 1 Ngày",
+      "duration": 1,
+      "guideService": "Hướng dẫn viên tiếng Việt",
+      "type": "Adult Only",
+      "image": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800",
+      "price": 850000,
+      "discount": 5,
+      "rating": 4.4,
+      "reviewCount": 98,
+      "locationId": "loc-001",
+      "detail": {
+        "description": "Tour 1 ngày khám phá Tràng An - Di sản thiên nhiên thế giới với cảnh quan non nước hữu tình và chùa Bái Đính - quần thể chùa lớn nhất Việt Nam.",
+        "itinerary": "07:00 Khởi hành từ Hà Nội - 09:00 Chùa Bái Đính - 12:00 Trưa tại nhà hàng - 14:00 Đi thuyền Tràng An - 17:00 Về Hà Nội",
+        "inclusions": "Xe đưa đón, Đi thuyền Tràng An, Bữa trưa, Hướng dẫn viên, Bảo hiểm"
+      },
+      "images": [
+        {
+          "url": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800",
+          "caption": "Tràng An"
+        }
+      ]
+    }
+  ],
+  "tourSessions": [
+    {
+      "id": "session-001",
+      "tourId": "tour-001",
+      "startDate": "2026-02-15T08:00:00+07:00",
+      "capacity": 25,
+      "bookedCount": 12,
+      "price": 3150000,
+      "status": "open"
+    },
+    {
+      "id": "session-002",
+      "tourId": "tour-001",
+      "startDate": "2026-03-01T08:00:00+07:00",
+      "capacity": 25,
+      "bookedCount": 8,
+      "price": 3150000,
+      "status": "open"
+    },
+    {
+      "id": "session-003",
+      "tourId": "tour-002",
+      "startDate": "2026-02-20T09:00:00+07:00",
+      "capacity": 40,
+      "bookedCount": 32,
+      "price": 3570000,
+      "status": "open"
+    },
+    {
+      "id": "session-004",
+      "tourId": "tour-002",
+      "startDate": "2026-02-25T09:00:00+07:00",
+      "capacity": 40,
+      "bookedCount": 40,
+      "price": 3570000,
+      "status": "soldout"
+    },
+    {
+      "id": "session-005",
+      "tourId": "tour-003",
+      "startDate": "2026-02-10T10:00:00+07:00",
+      "capacity": 30,
+      "bookedCount": 18,
+      "price": 5200000,
+      "status": "open"
+    },
+    {
+      "id": "session-006",
+      "tourId": "tour-004",
+      "startDate": "2026-02-18T07:30:00+07:00",
+      "capacity": 35,
+      "bookedCount": 22,
+      "price": 4224000,
+      "status": "open"
+    },
+    {
+      "id": "session-007",
+      "tourId": "tour-005",
+      "startDate": "2026-03-05T09:00:00+07:00",
+      "capacity": 28,
+      "bookedCount": 15,
+      "price": 4784000,
+      "status": "open"
+    },
+    {
+      "id": "session-008",
+      "tourId": "tour-006",
+      "startDate": "2026-02-08T07:00:00+07:00",
+      "capacity": 45,
+      "bookedCount": 35,
+      "price": 807500,
+      "status": "open"
+    },
+    {
+      "id": "session-009",
+      "tourId": "tour-006",
+      "startDate": "2026-02-12T07:00:00+07:00",
+      "capacity": 45,
+      "bookedCount": 28,
+      "price": 807500,
+      "status": "open"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "booking-001",
+      "bookingCode": "BK20260115001",
+      "userId": "user-001",
+      "sessionId": "session-001",
+      "adults": 2,
+      "children": 1,
+      "infants": 0,
+      "adultPrice": 3150000,
+      "childrenPrice": 2362500,
+      "infantPrice": 0,
+      "totalAmount": 8662500,
+      "status": "PAID"
+    },
+    {
+      "id": "booking-002",
+      "bookingCode": "BK20260115002",
+      "userId": "user-002",
+      "sessionId": "session-003",
+      "adults": 2,
+      "children": 0,
+      "infants": 1,
+      "adultPrice": 3570000,
+      "childrenPrice": 0,
+      "infantPrice": 357000,
+      "totalAmount": 7497000,
+      "status": "PAID"
+    },
+    {
+      "id": "booking-003",
+      "bookingCode": "BK20260115003",
+      "userId": "user-003",
+      "sessionId": "session-005",
+      "adults": 4,
+      "children": 2,
+      "infants": 0,
+      "adultPrice": 5200000,
+      "childrenPrice": 3900000,
+      "infantPrice": 0,
+      "totalAmount": 28600000,
+      "status": "PAID"
+    },
+    {
+      "id": "booking-004",
+      "bookingCode": "BK20260115004",
+      "userId": "user-001",
+      "sessionId": "session-006",
+      "adults": 2,
+      "children": 0,
+      "infants": 0,
+      "adultPrice": 4224000,
+      "childrenPrice": 0,
+      "infantPrice": 0,
+      "totalAmount": 8448000,
+      "status": "PENDING"
+    },
+    {
+      "id": "booking-005",
+      "bookingCode": "BK20260115005",
+      "userId": "user-004",
+      "sessionId": "session-008",
+      "adults": 1,
+      "children": 0,
+      "infants": 0,
+      "adultPrice": 807500,
+      "childrenPrice": 0,
+      "infantPrice": 0,
+      "totalAmount": 807500,
+      "status": "PAID"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "review-001",
+      "tourId": "tour-001",
+      "userId": "user-001",
+      "rating": 5,
+      "comment": "Tour Sapa tuyệt vời! Hướng dẫn viên nhiệt tình, cảnh đẹp mê ly. Đặc biệt việc chinh phục Fansipan bằng cáp treo rất ấn tượng. Khách sạn sạch sẽ, ăn uống ngon. Rất đáng để trải nghiệm!"
+    },
+    {
+      "id": "review-002",
+      "tourId": "tour-001",
+      "userId": "user-002",
+      "rating": 4,
+      "comment": "Chuyến đi thú vị, ruộng bậc thang rất đẹp. Tuy nhiên thời tiết hơi lạnh nên cần chuẩn bị áo ấm kỹ. Nhìn chung tour tổ chức tốt, giá cả hợp lý."
+    },
+    {
+      "id": "review-003",
+      "tourId": "tour-002",
+      "userId": "user-003",
+      "rating": 5,
+      "comment": "Du thuyền Hạ Long rất sang trọng, phòng ngủ thoải mái. Thức ăn trên thuyền ngon, đặc biệt là hải sản tươi sống. Chèo kayak và tham quan hang động rất thú vị. Recommend mạnh!"
+    },
+    {
+      "id": "review-004",
+      "tourId": "tour-002",
+      "userId": "user-004",
+      "rating": 5,
+      "comment": "Vịnh Hạ Long đẹp không tưởng! Dịch vụ trên thuyền chuyên nghiệp, HDV nhiệt tình. Buổi tối câu mực rất vui. Gia đình tôi rất hài lòng với chuyến đi này."
+    },
+    {
+      "id": "review-005",
+      "tourId": "tour-003",
+      "userId": "user-001",
+      "rating": 5,
+      "comment": "Phú Quốc thiên đường thật sự! Biển xanh cát trắng, nước trong vắt. Tour 4 đảo rất đáng đi, lặn ngắm san hô tuyệt đẹp. Resort 4 sao tiện nghi, view đẹp. Sẽ quay lại lần nữa!"
+    },
+    {
+      "id": "review-006",
+      "tourId": "tour-003",
+      "userId": "user-002",
+      "rating": 4,
+      "comment": "Chuyến đi tuyệt vời, con mình rất thích Vinpearl Safari. Hải sản tươi ngon, giá hợp lý. Chỉ có điều thời tiết hơi nắng nên cần kem chống nắng."
+    },
+    {
+      "id": "review-007",
+      "tourId": "tour-004",
+      "userId": "user-003",
+      "rating": 5,
+      "comment": "Cầu Vàng Bà Nà quá đẹp, check in nhiều ảnh lung linh. Phố cổ Hội An về đêm rất lãng mạn với đèn lồng. Ăn uống ở Hội An ngon và đa dạng. Tour rất đáng tiền!"
+    },
+    {
+      "id": "review-008",
+      "tourId": "tour-004",
+      "userId": "user-004",
+      "rating": 4,
+      "comment": "Tour tổ chức tốt, lịch trình hợp lý không bị vội. Bà Nà Hills đông người nhưng vẫn vui. HDV giải thích kỹ về lịch sử Hội An. Khách sạn sạch sẽ, ăn ngon."
+    },
+    {
+      "id": "review-009",
+      "tourId": "tour-005",
+      "userId": "user-001",
+      "rating": 4,
+      "comment": "Nha Trang đẹp lắm! Tắm bùn khoáng rất thư giãn. Vinpearl Land vui nhộn, trẻ em thích lắm. Biển đẹp nhưng sóng hơi to. Nhìn chung hài lòng."
+    },
+    {
+      "id": "review-010",
+      "tourId": "tour-006",
+      "userId": "user-004",
+      "rating": 5,
+      "comment": "Tour 1 ngày rất tiện, không mất nhiều thời gian. Tràng An cảnh đẹp như tranh vẽ, chèo thuyền qua hang động thú vị. Chùa Bái Đính rất uy nghi. Giá tốt, đáng đi!"
+    }
+  ],
+  "chatSessions": [
+    {
+      "id": "chat-001",
+      "userId": "user-001",
+      "status": "OPEN",
+      "messages": [
+        {
+          "id": "msg-001",
+          "senderId": "user-001",
+          "content": "Xin chào, tôi muốn hỏi về tour Sapa 3 ngày 2 đêm",
+          "timestamp": "2026-01-10T10:30:00+07:00"
+        },
+        {
+          "id": "msg-002",
+          "senderId": "admin-001",
+          "content": "Chào bạn! Tour Sapa 3N2Đ của chúng tôi bao gồm chinh phục Fansipan, tham quan làng Cát Cát và ruộng bậc thang. Giá hiện tại đang có khuyến mãi là 3.150.000đ/người. Bạn dự định đi vào thời gian nào ạ?",
+          "timestamp": "2026-01-10T10:32:00+07:00"
+        },
+        {
+          "id": "msg-003",
+          "senderId": "user-001",
+          "content": "Tôi muốn đi vào giữa tháng 2, gia đình 2 người lớn và 1 trẻ em 8 tuổi",
+          "timestamp": "2026-01-10T10:35:00+07:00"
+        },
+        {
+          "id": "msg-004",
+          "senderId": "admin-001",
+          "content": "Dạ vậy tour khởi hành ngày 15/2 rất phù hợp với gia đình bạn. Trẻ em 8 tuổi được tính giá 75% người lớn. Tổng chi phí cho 3 người là 8.662.500đ. Tour còn chỗ trống ạ. Bạn có muốn đặt không?",
+          "timestamp": "2026-01-10T10:37:00+07:00"
+        }
+      ]
+    },
+    {
+      "id": "chat-002",
+      "userId": "user-002",
+      "status": "CLOSED",
+      "messages": [
+        {
+          "id": "msg-005",
+          "senderId": "user-002",
+          "content": "Cho mình hỏi tour Hạ Long có bao gồm vé cáp treo không?",
+          "timestamp": "2026-01-12T14:20:00+07:00"
+        },
+        {
+          "id": "msg-006",
+          "senderId": "admin-001",
+          "content": "Xin chào! Tour du thuyền Hạ Long 2N1Đ của chúng tôi không có hoạt động cáp treo ạ. Tour bao gồm: đi du thuyền, tham quan hang Sửng Sốt, chèo kayak và câu mực đêm. Bạn có thể tham khảo thêm chi tiết lịch trình nhé.",
+          "timestamp": "2026-01-12T14:22:00+07:00"
+        },
+        {
+          "id": "msg-007",
+          "senderId": "user-002",
+          "content": "Vậy mình đặt cho 2 người lớn và 1 em bé 1 tuổi, ngày 20/2 nhé",
+          "timestamp": "2026-01-12T14:25:00+07:00"
+        },
+        {
+          "id": "msg-008",
+          "senderId": "admin-001",
+          "content": "Dạ cảm ơn bạn! Mình đã đặt chỗ cho gia đình bạn tour ngày 20/2. Em bé dưới 2 tuổi tính 10% giá người lớn. Tổng chi phí: 7.497.000đ. Bạn vui lòng thanh toán trong 24h để giữ chỗ nhé!",
+          "timestamp": "2026-01-12T14:27:00+07:00"
+        }
+      ]
+    },
+    {
+      "id": "chat-003",
+      "userId": "user-003",
+      "status": "OPEN",
+      "messages": [
+        {
+          "id": "msg-009",
+          "senderId": "user-003",
+          "content": "Tour Phú Quốc có bao gồm vé máy bay không?",
+          "timestamp": "2026-01-14T09:15:00+07:00"
+        },
+        {
+          "id": "msg-010",
+          "senderId": "admin-001",
+          "content": "Xin chào! Tour Phú Quốc 4N3Đ đã bao gồm vé máy bay khứ hồi từ TP.HCM rồi ạ. Ngoài ra còn có resort 4*, các bữa ăn, tour 4 đảo và vé tham quan. Bạn xuất phát từ đâu ạ?",
+          "timestamp": "2026-01-14T09:17:00+07:00"
+        }
+      ]
+    }
+  ]
+}

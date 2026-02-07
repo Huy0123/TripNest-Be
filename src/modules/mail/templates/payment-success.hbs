@@ -1,0 +1,302 @@
+<html lang='vi'>
+
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Thanh toán thành công - {{appName}}</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f5f7fa;
+        line-height: 1.6;
+        color: #333;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        padding: 30px 20px;
+        text-align: center;
+        color: white;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+
+      .success-icon {
+        font-size: 60px;
+        margin-bottom: 10px;
+      }
+
+      .content {
+        padding: 40px 30px;
+      }
+
+      .greeting {
+        font-size: 18px;
+        margin-bottom: 20px;
+        color: #2c3e50;
+      }
+
+      .message {
+        font-size: 16px;
+        margin-bottom: 30px;
+        line-height: 1.8;
+      }
+
+      .booking-info {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-radius: 15px;
+        padding: 25px;
+        color: white;
+        margin: 30px 0;
+        box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);
+      }
+
+      .booking-code {
+        font-size: 32px;
+        font-weight: bold;
+        text-align: center;
+        letter-spacing: 3px;
+        margin: 15px 0;
+        font-family: 'Courier New', monospace;
+      }
+
+      .info-table {
+        width: 100%;
+        margin: 20px 0;
+        border-collapse: collapse;
+      }
+
+      .info-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .info-table td:first-child {
+        font-weight: bold;
+        color: #555;
+        width: 40%;
+      }
+
+      .amount-highlight {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .next-steps {
+        background-color: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        border-radius: 5px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+
+      .next-steps h3 {
+        color: #2e7d32;
+        margin-bottom: 15px;
+      }
+
+      .next-steps ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+
+      .next-steps li {
+        margin: 8px 0;
+      }
+
+      .footer {
+        background-color: #2c3e50;
+        color: #ecf0f1;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .footer-content {
+        margin-bottom: 20px;
+      }
+
+      .social-links {
+        margin: 20px 0;
+      }
+
+      .social-links a {
+        color: #3498db;
+        text-decoration: none;
+        margin: 0 10px;
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .content {
+          padding: 20px;
+        }
+
+        .header h1 {
+          font-size: 24px;
+        }
+
+        .success-icon {
+          font-size: 50px;
+        }
+
+        .booking-code {
+          font-size: 24px;
+        }
+
+        .amount-highlight {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class='container'>
+      <!-- Header -->
+      <div class='header'>
+        <div class='success-icon'>✅</div>
+        <h1>{{appName}}</h1>
+        <p>Thanh toán thành công!</p>
+      </div>
+
+      <!-- Content -->
+      <div class='content'>
+        <div class='greeting'>
+          Chúc mừng bạn! 🎉
+        </div>
+
+        <div class='message'>
+          Thanh toán của bạn đã được xử lý
+          <strong>thành công</strong>. Chúng tôi đã nhận được khoản thanh toán
+          cho booking của bạn.
+        </div>
+
+        <!-- Booking Info -->
+        <div class='booking-info'>
+          <div
+            style='text-align: center; font-size: 14px; margin-bottom: 5px;'
+          >MÃ BOOKING</div>
+          <div class='booking-code'>{{bookingCode}}</div>
+        </div>
+
+        <!-- Payment Details -->
+        <table class='info-table'>
+          <tr>
+            <td>🏖️ Tour du lịch:</td>
+            <td>{{tourName}}</td>
+          </tr>
+          <tr>
+            <td>💳 Số tiền thanh toán:</td>
+            <td><strong>{{amount}} VNĐ</strong></td>
+          </tr>
+          <tr>
+            <td>📅 Ngày thanh toán:</td>
+            <td>{{paymentDate}}</td>
+          </tr>
+          <tr>
+            <td>✅ Trạng thái:</td>
+            <td><span style='color: #4caf50; font-weight: bold;'>Thành công</span></td>
+          </tr>
+        </table>
+
+        <div class='amount-highlight'>
+          💰
+          {{amount}}
+          VNĐ
+        </div>
+
+        <!-- Next Steps -->
+        <div class='next-steps'>
+          <h3>📋 Các bước tiếp theo:</h3>
+          <ul>
+            <li><strong>Kiểm tra email xác nhận</strong>
+              - Bạn sẽ nhận được email chi tiết về booking</li>
+            <li><strong>Theo dõi booking</strong>
+              - Đăng nhập vào tài khoản để xem chi tiết lịch trình</li>
+            <li><strong>Chuẩn bị hành lý</strong>
+              - Xem danh sách vật dụng cần thiết cho chuyến đi</li>
+            <li><strong>Liên hệ hướng dẫn viên</strong>
+              - Chúng tôi sẽ gửi thông tin liên lạc trước ngày khởi hành</li>
+          </ul>
+        </div>
+
+        <div class='message'>
+          Một bản sao hóa đơn điện tử đầy đủ đã được gửi đến email của bạn. Bạn
+          có thể lưu lại để làm chứng từ thanh toán.
+        </div>
+
+        <div class='message'>
+          <strong>Cần hỗ trợ?</strong><br />
+          Nếu bạn có bất kỳ câu hỏi nào về booking hoặc thanh toán, vui lòng
+          liên hệ:
+          <ul style='margin: 10px 0; padding-left: 20px;'>
+            <li>📧 Email:
+              <a
+                href='mailto:{{supportEmail}}'
+                style='color: #11998e;'
+              >{{supportEmail}}</a></li>
+            <li>📞 Hotline: <strong>{{supportPhone}}</strong></li>
+          </ul>
+        </div>
+
+        <div
+          class='message'
+          style='text-align: center; font-size: 18px; color: #11998e; font-weight: bold;'
+        >
+          Chúc bạn có một chuyến đi thật vui vẻ và đáng nhớ! 🌟✈️
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class='footer'>
+        <div class='footer-content'>
+          <p><strong>{{appName}}</strong></p>
+          <p>{{companyAddress}}</p>
+          <p>Email: {{supportEmail}} | Hotline: {{supportPhone}}</p>
+        </div>
+
+        <div class='social-links'>
+          <a href='{{facebookUrl}}'>Facebook</a>
+          |
+          <a href='{{instagramUrl}}'>Instagram</a>
+          |
+          <a href='{{websiteUrl}}'>Website</a>
+        </div>
+
+        <p style='font-size: 12px; color: #95a5a6; margin-top: 20px;'>
+          ©
+          {{currentYear}}
+          {{appName}}. Tất cả quyền được bảo lưu.<br />
+          Email này được gửi tự động, vui lòng không trả lời.
+        </p>
+      </div>
+    </div>
+  </body>
+
+</html>
