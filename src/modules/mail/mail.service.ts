@@ -14,7 +14,7 @@ export class MailService {
 
   async verifyAccount(
     to: string,
-    verifyAccountIf: VerifyAccountInterface,
+    verifyAccount: VerifyAccountInterface,
   ): Promise<{ success: boolean; message: string }> {
     this.logger.log(`Sending verification email to ${to}`);
     const appName = this.configService.get<string>('APP_NAME') || 'OurApp';
@@ -30,7 +30,8 @@ export class MailService {
     const currentYear = dayjs().year();
     const expireTime = this.configService.get<number>('OTP_EXPIRE_TIME') || 10;
     const context = {
-      ...verifyAccountIf,
+      ...verifyAccount,
+      verificationCode: verifyAccount.otp,
       appName,
       supportEmail,
       supportPhone,
@@ -44,7 +45,7 @@ export class MailService {
     try {
       await this.mailerService.sendMail({
         to,
-        subject: 'Verify your account',
+        subject: '[TripNest] Xác thực tài khoản của bạn',
         template: 'verify-account',
         context,
       });
@@ -64,9 +65,9 @@ export class MailService {
     data: { otp: string; firstName: string; lastName: string },
   ): Promise<{ success: boolean; message: string }> {
     this.logger.log(`Sending forgot password email to ${to}`);
-    const appName = this.configService.get<string>('APP_NAME') || 'OurApp';
+    const appName = this.configService.get<string>('APP_NAME') || 'TripNest';
     const supportEmail =
-      this.configService.get<string>('SUPPORT_EMAIL') || 'support@ourapp.com';
+      this.configService.get<string>('SUPPORT_EMAIL') || 'support@tripnest.com';
     const currentYear = dayjs().year();
     const expireTime = this.configService.get<number>('OTP_EXPIRE_TIME') || 10;
 

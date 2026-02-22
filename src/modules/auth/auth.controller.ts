@@ -54,6 +54,13 @@ export class AuthController {
     return this.authService.verifyAccount(body.email, body.otp);
   }
 
+  @Post('resend-verification-email')
+  @Public()
+  @Message('Verification email resent successfully.')
+  resendVerificationEmail(@Body() body: { email: string }) {
+    return this.authService.resendVerificationEmail(body.email);
+  }
+
   @Get('me')
   getProfile(@Req() req: Request) {
     return req.user;

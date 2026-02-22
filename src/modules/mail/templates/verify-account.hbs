@@ -54,29 +54,6 @@
             line-height: 1.8;
         }
 
-        .verify-button {
-            text-align: center;
-            margin: 30px 0;
-        }
-
-        .btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 25px;
-            font-weight: bold;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
         .verification-code {
             background-color: #f8f9fa;
             border: 2px dashed #667eea;
@@ -151,7 +128,7 @@
         <!-- Header -->
         <div class="header">
             <h1>{{appName}}</h1>
-            <p>Chào mừng bạn đến với hệ thống du lịch hàng đầu!</p>
+            <p>Chào mừng bạn đến với dịch vụ du lịch của chúng tôi!</p>
         </div>
 
         <!-- Content -->
@@ -166,40 +143,21 @@
                 vui lòng xác thực địa chỉ email của bạn.
             </div>
 
-            {{#if verificationUrl}}
-            <!-- Verification Button -->
-            <div class="verify-button">
-                <a href="{{verificationUrl}}" class="btn">
-                    🚀 Xác Thực Tài Khoản
-                </a>
-            </div>
-            {{/if}}
 
-            {{#if verificationCode}}
+
             <!-- Verification Code -->
             <div class="verification-code">
-                <p>Hoặc nhập mã xác thực sau:</p>
+                <p>Mã OTP xác thực của bạn là:</p>
                 <div class="code">{{verificationCode}}</div>
             </div>
-            {{/if}}
 
             <!-- Security Notice -->
             <div class="security-notice">
                 <strong>⚠️ Lưu ý bảo mật:</strong>
                 <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>Link xác thực sẽ hết hạn sau <span class="expire-time">{{expireTime}} phút</span></li>
-                    <li>Không chia sẻ link này với bất kỳ ai</li>
+                    <li>Mã OTP xác thực sẽ hết hạn sau <span class="expire-time">{{expireTime}} phút</span></li>
+                    <li>Không chia sẻ mã OTP này với bất kỳ ai</li>
                     <li>Nếu bạn không đăng ký tài khoản, vui lòng bỏ qua email này</li>
-                </ul>
-            </div>
-
-            <div class="message">
-                Sau khi xác thực thành công, bạn có thể:
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>🌍 Khám phá hàng ngàn tour du lịch hấp dẫn</li>
-                    <li>💰 Nhận được ưu đãi độc quyền dành cho thành viên</li>
-                    <li>📱 Quản lý booking và lịch trình dễ dàng</li>
-                    <li>⭐ Đánh giá và chia sẻ trải nghiệm</li>
                 </ul>
             </div>
 
@@ -215,7 +173,6 @@
             <div class="footer-content">
                 <p><strong>{{appName}}</strong></p>
                 <p>{{companyAddress}}</p>
-                <p>Email: {{supportEmail}} | Hotline: {{supportPhone}}</p>
             </div>
 
             <div class="social-links">

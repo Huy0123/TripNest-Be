@@ -16,15 +16,15 @@ import * as path from 'path';
       useFactory: (configService: ConfigService) => ({
         transport: {
           host: configService.get<string>('MAIL_HOST'),
-          port: configService.get<number>('MAIL_PORT') || 465,
-          secure: true, // true for 465, false for other ports like 587
+          port: configService.get<number>('MAIL_PORT') || 587,
+          secure: false,
           auth: {
             user: configService.get<string>('MAIL_USER'),
-            pass: configService.get<string>('MAIL_PASS'),
+            pass: configService.get<string>('MAIL_PASSWORD'),
           },
         },
         defaults: {
-          from: `no-reply@travelife.com`,
+          from: `"TripNest" <${configService.get<string>('MAIL_USER')}>`,
         },
         template: {
           dir: path.join(__dirname, 'templates'),

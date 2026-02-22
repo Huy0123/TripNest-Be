@@ -5,7 +5,7 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import ms from 'ms';
+import ms = require('ms');
 @Injectable()
 export class AuthService {
   private logger = new Logger(AuthService.name);
@@ -16,7 +16,7 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.findByEmail(email, true);
     if (user && (await bcrypt.compare(pass, user.password))) {
       const { password, ...result } = user;
       return result;
@@ -65,6 +65,10 @@ export class AuthService {
 
   async verifyAccount(email: string, otp: string) {
     return await this.usersService.verifyAccount(email, otp);
+  }
+
+  async resendVerificationEmail(email: string) {
+    return await this.usersService.sendVerificationAccount(email);
   }
 
   async findUserById(id: string) {
