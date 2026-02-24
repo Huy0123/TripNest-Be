@@ -1,14 +1,14 @@
 import { UserRole } from '@/enums/user-role.enum';
+import { AuthProvider } from '@/enums/auth.enum';
 import { Booking } from '@/modules/bookings/entities/booking.entity';
 import { Review } from '@/modules/reviews/entities/review.entity';
-import { UserProfile } from '@/modules/user_profiles/entities/user_profile.entity';
+import { Profile } from '@/modules/profiles/entities/profile.entity';
 import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
   Index,
-  JoinColumn,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -37,13 +37,13 @@ export class User {
   @Column({ select: false, nullable: true })
   password: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  @Column({ type: 'enum', enum: UserRole})
   role: UserRole;
 
   @Column({ default: false })
   isActive: boolean;
 
-  @Column({ type: 'simple-array', default: 'local' })
+  @Column({ type: 'simple-array'})
   providers: string[];
 
   @Column({ nullable: true })
@@ -58,8 +58,14 @@ export class User {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
-  @OneToOne(() => UserProfile, (profile) => profile.user, { cascade: true })
-  profile: UserProfile;
+  @OneToOne(() => Profile, (profile) => profile.user, { cascade: true })
+  profile: Profile;
+
+  @Column({ nullable: true })
+  avatar?: string;
+
+  @Column({ nullable: true })
+  phone?: string;
 
   @OneToMany(() => Booking, (booking) => booking.user)
   bookings: Booking[];
