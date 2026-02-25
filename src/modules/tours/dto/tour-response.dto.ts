@@ -47,22 +47,19 @@ export class TourResponseDto {
   entryFees: string;
 
   @Expose()
-  location: any;
+  departureLocation: any;
+
+  @Expose()
+  destinations: any[];
 
   @Expose()
   transportation: any;
-
-  @Expose()
-  images: any[];
 
   @Expose()
   detail: any;
 
   @Expose()
   sessions: any[];
-
-  @Expose()
-  reviews: any[];
 
   @Expose()
   createdAt: Date;

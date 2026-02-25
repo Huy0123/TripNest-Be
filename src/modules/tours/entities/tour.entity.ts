@@ -14,6 +14,7 @@ import {
 } from 'typeorm';
 import { Location } from '@/modules/location/entities/location.entity';
 import { TourDetail } from '@/modules/tour-details/entities/tour-detail.entity';
+import { StayOption } from '@/enums/stay.enum';
 
 @Entity('tours')
 export class Tour {
@@ -46,8 +47,10 @@ export class Tour {
   @Column({ default: false })
   isPopular: boolean;
 
+  @Column({type: 'enum', enum: StayOption})
+  stayOption: StayOption;
+
   @ManyToOne(() => Location, (location) => location.departureTours)
-  @JoinColumn({ name: 'departureLocationId' })
   departureLocation: Location;
 
   @ManyToMany(() => Location, (location) => location.destinationTours)

@@ -3,6 +3,8 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,7 +15,7 @@ import * as dayjs from 'dayjs';
 import { NAME_QUEUE } from 'src/enums/name-queue.enum';
 import { UserRole } from 'src/enums/user-role.enum';
 import { AuthProvider } from 'src/enums/auth.enum';
-import { CacheService } from '../cache/cache.service';
+import { OtpService } from '../auth/otp.service';
 import { GoogleDto } from '../auth/dto/google.dto';
 import { UploadService } from '../upload/upload.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -24,7 +26,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly cacheService: CacheService,
+    @Inject(forwardRef(() => OtpService))
+    private readonly otpService: OtpService,
     private readonly uploadService: UploadService,
   ) {}
 
@@ -102,7 +105,7 @@ export class UsersService {
   async sendVerificationAccount(email: string) {
     this.logger.log(`Starting verification email to ${email}`);
     const currentTime = dayjs().valueOf();
-    const cachedData = await this.cacheService.getValueOtp(
+    const cachedData = await this.otpService.getValueOtp(
       NAME_QUEUE.SEND_OTP_VERIFY_ACCOUNT,
       email,
     );
@@ -125,7 +128,7 @@ export class UsersService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    await this.cacheService.genOtp(
+    await this.otpService.genOtp(
       NAME_QUEUE.SEND_OTP_VERIFY_ACCOUNT,
       email,
       userEmail?.firstName || '',
@@ -141,7 +144,7 @@ export class UsersService {
 
   async verifyAccount(email: string, otp: string) {
     this.logger.log(`Start verifying account for ${email}`);
-    const cachedData = await this.cacheService.validateOtp(
+    const cachedData = await this.otpService.validateOtp(
       NAME_QUEUE.SEND_OTP_VERIFY_ACCOUNT,
       email,
       otp,
@@ -161,7 +164,7 @@ export class UsersService {
     }
     await this.userRepository.update({ email }, { isActive: true });
     this.logger.log(`User ${email} verified successfully`);
-    await this.cacheService.deleteOtp(
+    await this.otpService.deleteOtp(
       NAME_QUEUE.SEND_OTP_VERIFY_ACCOUNT,
       email,
     );

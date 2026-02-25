@@ -4,12 +4,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
 import { Tour } from './entities/tour.entity';
 import { Location } from '../location/entities/location.entity';
 import { CacheService } from '@/modules/cache/cache.service';
+import { ToursQueryDto } from './dto/tours-query.dto';
 
 @Injectable()
 export class ToursService {
@@ -24,25 +25,40 @@ export class ToursService {
   async create(createTourDto: CreateTourDto): Promise<Tour> {
     const tour = this.tourRepository.create(createTourDto);
 
-    // Nếu có locationId, tìm và gán location
-    if (createTourDto.locationId) {
-      const location = await this.locationRepository.findOne({
-        where: { id: createTourDto.locationId },
+    // Xử lý departureLocation
+    if (createTourDto.departureLocationId) {
+      const departureLocation = await this.locationRepository.findOne({
+        where: { id: createTourDto.departureLocationId },
       });
-      if (!location) {
+      if (!departureLocation) {
         throw new NotFoundException(
-          `Location with ID ${createTourDto.locationId} not found`,
+          `Departure location with ID ${createTourDto.departureLocationId} not found`,
         );
       }
-      tour.location = location;
+      tour.departureLocation = departureLocation;
+    }
+
+    // Xử lý destinations
+    if (createTourDto.destinationIds && createTourDto.destinationIds.length > 0) {
+      const destinations = await this.locationRepository.find({
+        where: { id: In(createTourDto.destinationIds) },
+      });
+      if (destinations.length !== createTourDto.destinationIds.length) {
+        throw new NotFoundException(`One or more destination locations not found`);
+      }
+      tour.destinations = destinations;
     }
 
     try {
       const savedTour = await this.tourRepository.save(tour);
-      // Invalidate cache
-      await this.invalidateCache();
-      if (savedTour.location) {
-          await this.cacheService.del(`tours:location:${savedTour.location.id}`);
+      await this.cacheService.del(`tours:list:*`);
+      if (savedTour.departureLocation) {
+          await this.cacheService.del(`tours:location:${savedTour.departureLocation.id}`);
+      }
+      if (savedTour.destinations) {
+        for (const dest of savedTour.destinations) {
+          await this.cacheService.del(`tours:location:${dest.id}`);
+        }
       }
       return savedTour;
     } catch (error) {
@@ -50,55 +66,52 @@ export class ToursService {
     }
   }
 
-  async findAll(query: any): Promise<{ data: Tour[]; total: number; page: number; limit: number }> {
+  async findAll(query: ToursQueryDto ): Promise<{ data: Tour[]; total: number; page: number; limit: number }> {
     const {
       page = 1,
       limit = 10,
-      search,
       minPrice,
       maxPrice,
       destinationId,
+      departureLocationId,
+      rating,
+      duration,
+      stayOption,
+      date,
       sortBy = 'createdAt',
       sortOrder = 'DESC',
+      isPopular,
     } = query;
 
-    // Version-based cache key
-    const version = await this.cacheService.get<number>('tours:version') || 0;
+    // Cache key
     const queryHash = Buffer.from(JSON.stringify(query)).toString('base64');
-    const cacheKey = `tours:list:v${version}:${queryHash}`;
+    const cacheKey = `tours:list:${queryHash}`;
 
     const cachedData = await this.cacheService.get<{ data: Tour[]; total: number; page: number; limit: number }>(cacheKey);
     if (cachedData) {
       return cachedData;
     }
 
-    // Optimize: Only load necessary fields and relations
     const queryBuilder = this.tourRepository.createQueryBuilder('tour')
-      .leftJoinAndSelect('tour.location', 'location')
-      .leftJoinAndSelect('tour.images', 'images')
+      .leftJoinAndSelect('tour.departureLocation', 'departureLocation')
+      .leftJoinAndSelect('tour.destinations', 'destinations')
       .select([
         'tour.id',
         'tour.name',
         'tour.duration',
-        'tour.type',
         'tour.image',
         'tour.price',
-        'tour.discount',
         'tour.rating',
         'tour.reviewCount',
         'tour.guideService',
         'tour.createdAt',
-        'location.id',
-        'location.name',
-        'location.country',
-        'images.id',
-        'images.url',
-        'images.isMain',
+        'departureLocation.id',
+        'departureLocation.city',
+        'departureLocation.country',
+        'destinations.id',
+        'destinations.city',
+        'destinations.country',
       ]);
-
-    if (search) {
-      queryBuilder.andWhere('(tour.name ILIKE :search)', { search: `%${search}%` });
-    }
 
     if (minPrice) {
       queryBuilder.andWhere('tour.price >= :minPrice', { minPrice });
@@ -109,7 +122,31 @@ export class ToursService {
     }
 
     if (destinationId) {
-      queryBuilder.andWhere('location.id = :destinationId', { destinationId });
+      queryBuilder.andWhere('destinations.id = :destinationId OR departureLocation.id = :destinationId', { destinationId });
+    }
+
+    if (departureLocationId) {
+      queryBuilder.andWhere('departureLocation.id = :departureLocationId', { departureLocationId });
+    }
+
+    if (rating) {
+      queryBuilder.andWhere('tour.rating >= :rating', { rating });
+    }
+
+    if (duration) {
+      queryBuilder.andWhere('tour.duration <= :duration', { duration });
+    }
+
+    if (stayOption) {
+      queryBuilder.andWhere('tour.stayOption = :stayOption', { stayOption });
+    }
+
+    if (date) {
+      queryBuilder.andWhere('tour.date = :date', { date });
+    }
+
+    if (isPopular !== undefined) {
+      queryBuilder.andWhere('tour.isPopular = :isPopular', { isPopular });
     }
 
     queryBuilder.orderBy(`tour.${sortBy}`, sortOrder as 'ASC' | 'DESC');
@@ -118,13 +155,8 @@ export class ToursService {
     const [data, total] = await queryBuilder.getManyAndCount();
     const result = { data, total, page, limit };
 
-    await this.cacheService.set(cacheKey, result, 86400000); // 24 hours
+    await this.cacheService.set(cacheKey, result, 300_000); // 5 minutes
     return result;
-  }
-
-  async invalidateCache() {
-    const currentVersion = await this.cacheService.get<number>('tours:version') || 0;
-    await this.cacheService.set('tours:version', currentVersion + 1, 0);
   }
 
   async findOne(id: string): Promise<Tour> {
@@ -138,12 +170,9 @@ export class ToursService {
     const tour = await this.tourRepository.findOne({
       where: { id },
       relations: [
-        'location',
-        'images',
+        'departureLocation',
+        'destinations',
         'detail',
-        'sessions',
-        'reviews',
-        'reviews.user',
       ],
     });
 
@@ -151,49 +180,48 @@ export class ToursService {
       throw new NotFoundException(`Tour with ID ${id} not found`);
     }
 
-    await this.cacheService.set(cacheKey, tour, 3600000); // 1 hour
+    await this.cacheService.set(cacheKey, tour, 600_000); // 10 minutes
     return tour;
   }
 
   async update(id: string, updateTourDto: UpdateTourDto): Promise<Tour> {
     const tour = await this.findOne(id);
 
-    // Cập nhật location nếu có
-    if (updateTourDto.locationId) {
-      const location = await this.locationRepository.findOne({
-        where: { id: updateTourDto.locationId },
+    if (updateTourDto.departureLocationId) {
+      const departureLocation = await this.locationRepository.findOne({
+        where: { id: updateTourDto.departureLocationId },
       });
-      if (!location) {
+      if (!departureLocation) {
         throw new NotFoundException(
-          `Location with ID ${updateTourDto.locationId} not found`,
+          `Departure location with ID ${updateTourDto.departureLocationId} not found`,
         );
       }
-      tour.location = location;
+      tour.departureLocation = departureLocation;
     }
 
-    // Cập nhật transportation nếu có
-    // if (updateTourDto.transportationId) {
-    //   const transportation = await this.transportationRepository.findOne({
-    //     where: { id: updateTourDto.transportationId },
-    //   });
-    //   if (!transportation) {
-    //     throw new NotFoundException(
-    //       `Transportation with ID ${updateTourDto.transportationId} not found`,
-    //     );
-    //   }
-    //   tour.transportation = transportation;
-    // }
+    if (updateTourDto.destinationIds) {
+      const destinations = await this.locationRepository.find({
+        where: { id: In(updateTourDto.destinationIds) },
+      });
+      if (destinations.length !== updateTourDto.destinationIds.length) {
+        throw new NotFoundException(`One or more destination locations not found`);
+      }
+      tour.destinations = destinations;
+    }
 
-    // Merge các thuộc tính khác
     Object.assign(tour, updateTourDto);
 
     try {
       const savedTour = await this.tourRepository.save(tour);
-      // Invalidate cache
-      await this.invalidateCache();
+      await this.cacheService.del(`tours:list:*`);
       await this.cacheService.del(`tours:${id}`);
-      if (savedTour.location) {
-          await this.cacheService.del(`tours:location:${savedTour.location.id}`);
+      if (savedTour.departureLocation) {
+          await this.cacheService.del(`tours:location:${savedTour.departureLocation.id}`);
+      }
+      if (savedTour.destinations) {
+        for (const dest of savedTour.destinations) {
+          await this.cacheService.del(`tours:location:${dest.id}`);
+        }
       }
       return savedTour;
     } catch (error) {
@@ -203,69 +231,22 @@ export class ToursService {
 
   async remove(id: string): Promise<void> {
     const tour = await this.findOne(id);
-    const locationId = tour.location?.id;
+    const departureLocationId = tour.departureLocation?.id;
+    const destinationIds = tour.destinations?.map(d => d.id) || [];
 
     try {
       await this.tourRepository.softRemove(tour);
-      // Invalidate cache
-      await this.invalidateCache();
+      await this.cacheService.del(`tours:list:*`);
       await this.cacheService.del(`tours:${id}`);
-       if (locationId) {
-          await this.cacheService.del(`tours:location:${locationId}`);
+      if (departureLocationId) {
+          await this.cacheService.del(`tours:location:${departureLocationId}`);
+      }
+      for (const destId of destinationIds) {
+          await this.cacheService.del(`tours:location:${destId}`);
       }
     } catch (error) {
       throw new BadRequestException('Failed to delete tour: ' + error.message);
     }
   }
 
-  async findByLocation(locationId: string): Promise<Tour[]> {
-    const cacheKey = `tours:location:${locationId}`;
-    const cachedData = await this.cacheService.get<Tour[]>(cacheKey);
-    if (cachedData) {
-      return cachedData;
-    }
-    const tours = await this.tourRepository.find({
-      where: { location: { id: locationId } },
-      relations: ['location', 'images'],
-      select: {
-        id: true,
-        name: true,
-        duration: true,
-        type: true,
-        image: true,
-        price: true,
-        discount: true,
-        rating: true,
-        reviewCount: true,
-      },
-    });
-
-    await this.cacheService.set(cacheKey, tours, 3600000); // 1 hour
-    return tours;
-  }
-
-  async search(keyword: string): Promise<Tour[]> {
-    return await this.tourRepository
-      .createQueryBuilder('tour')
-      .leftJoinAndSelect('tour.location', 'location')
-      .leftJoinAndSelect('tour.images', 'images')
-      .select([
-        'tour.id',
-        'tour.name',
-        'tour.duration',
-        'tour.type',
-        'tour.price',
-        'tour.rating',
-        'location.id',
-        'location.name',
-        'images.id',
-        'images.url',
-        'images.isMain',
-      ])
-      .where('tour.name ILIKE :keyword', {
-        keyword: `%${keyword}%`,
-      })
-      .orderBy('tour.createdAt', 'DESC')
-      .getMany();
-  }
 }

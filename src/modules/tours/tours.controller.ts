@@ -13,6 +13,7 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
 } from '@nestjs/common';
+import { Public } from '@/decorators/public.decorator';
 import { ToursService } from './tours.service';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
@@ -37,6 +38,29 @@ export class ToursController {
     };
   }
 
+  @Public()
+  @Get('featured')
+  async getFeatured() {
+    const result = await this.toursService.findAll({ isPopular: true, limit: 6 });
+    return result.data.map((tour) =>
+        plainToClass(TourResponseDto, tour, { excludeExtraneousValues: true }),
+    );
+  }
+
+  @Public()
+  @Get('popular')
+  async getPopular(@Query('limit') limit: number = 10) {
+    const result = await this.toursService.findAll({ 
+        sortBy: 'rating', 
+        sortOrder: 'DESC', 
+        limit: limit 
+    });
+    return result.data.map((tour) =>
+        plainToClass(TourResponseDto, tour, { excludeExtraneousValues: true }),
+    );
+  }
+
+  @Public()
   @Get()
   async findAll(@Query() query: ToursQueryDto) {
     const result = await this.toursService.findAll(query);
@@ -52,18 +76,7 @@ export class ToursController {
     };
   }
 
-  @Get('location/:locationId')
-  async findByLocation(@Param('locationId') locationId: string) {
-    const tours = await this.toursService.findByLocation(locationId);
-    return {
-      message: 'Tours by location retrieved successfully',
-      data: tours.map((tour) =>
-        plainToClass(TourResponseDto, tour, { excludeExtraneousValues: true }),
-      ),
-      total: tours.length,
-    };
-  }
-
+  @Public()
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const tour = await this.toursService.findOne(id);
