@@ -14,8 +14,6 @@ import { Message } from '@/decorators/message.decorator';
 import { Response, Request } from 'express';
 import { LocalAuthGuard } from '@/guards/local-auth.guard';
 import { RefreshJwt } from '@/guards/refresh-jwt.guard';
-import { GoogleOAuthGuard } from '@/guards/google-auth.guard';
-
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -31,20 +29,24 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Message('Login successful.')
   login(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    return this.authService.login(req.user, res);
+    const rememberMe = req.body.rememberMe === true;
+    return this.authService.login(req.user, res, rememberMe);
   }
 
-  @Get()
-  @UseGuards(GoogleOAuthGuard)
-  async googleAuth(@Req() req) {}
+  @Post('logout')
+  @Message('Logout successful.')
+  logout(@Res({ passthrough: true }) res: Response) {
+    return this.authService.logout(res);
+  }
 
-  @Get('google/callback')
-  @UseGuards(GoogleOAuthGuard)
-  async googleAuthRedirect(
-    @Req() req,
+  @Post('google')
+  @Public()
+  @Message('Google login successful.')
+  async googleAuth(
+    @Body() body: { idToken: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.googleLogin(req.user, res);
+    return this.authService.googleLogin(body.idToken, res);
   }
 
   @Post('verify-account')
@@ -70,7 +72,7 @@ export class AuthController {
   @Public()
   @Message('Token refreshed successfully.')
   @UseGuards(RefreshJwt)
-  refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    return this.authService.handleRefreshToken(req.user, res);
+  refreshToken(@Req() req: Request) {
+    return this.authService.handleRefreshToken(req.user);
   }
 }

@@ -5,28 +5,47 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { OAuth2Client } from 'google-auth-library';
+import { AuthProvider } from '@/enums/auth.enum';
 import ms = require('ms');
 @Injectable()
 export class AuthService {
   private logger = new Logger(AuthService.name);
+  private googleClient: OAuth2Client;
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) {
+    this.googleClient = new OAuth2Client(
+      this.configService.get<string>('GOOGLE_CLIENT_ID'),
+    );
+  }
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findByEmail(email, true);
-    if (user && (await bcrypt.compare(pass, user.password))) {
+    if (!user) {
+      return null;
+    }
+
+    if (!user.password || !user.providers?.includes(AuthProvider.LOCAL)) {
+      throw new HttpException(
+        'Email này được đăng ký bằng Google. Vui lòng đăng nhập bằng Google hoặc Đăng ký tài khoản để tạo mật khẩu.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (await bcrypt.compare(pass, user.password)) {
       const { password, ...result } = user;
       return result;
     }
     return null;
   }
 
-  async login(user: any, res: Response) {
+  async login(user: any, res: Response, rememberMe: boolean = false) {
     try {
-      return this.createTokensAndResponse(user, res);
+      return this.createTokensAndResponse(user, res, rememberMe);
     } catch (error) {
       this.logger.error('Error during login', error.stack);
       throw new HttpException(
@@ -36,20 +55,41 @@ export class AuthService {
     }
   }
 
-  async googleLogin(user: any, res: Response) {
-    try {
-      const { email, firstName, lastName, picture, id: googleId } = user;
+  logout(res: Response) {
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: true,
+    });
+    return {
+      success: true,
+      message: 'Logout successful',
+    };
+  }
 
-      // Tạo hoặc update user với Google provider
-      const existingUser = await this.usersService.createOrUpdateGoogleUser({
-        email,
-        firstName,
-        lastName,
-        picture,
-        googleId,
+  async googleLogin(idToken: string, res: Response) {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
       });
 
-      return this.createTokensAndResponse(existingUser, res);
+      const payload = ticket.getPayload();
+      
+      if (!payload) {
+        throw new HttpException('Invalid Google Token', HttpStatus.UNAUTHORIZED);
+      }
+
+      const { email, given_name, family_name, picture, sub } = payload;
+
+      const existingUser = await this.usersService.createOrUpdateGoogleUser({
+        email: email as string,
+        firstName: given_name || '',
+        lastName: family_name || '',
+        picture: picture || '',
+        googleId: sub,
+      });
+
+      return this.createTokensAndResponse(existingUser, res, true); 
     } catch (error) {
       this.logger.error('Error during Google login', error.stack);
       throw new HttpException(
@@ -75,35 +115,29 @@ export class AuthService {
     return await this.usersService.findUserById(id);
   }
 
-  handleRefreshToken(user: any, res: Response) {
+  handleRefreshToken(user: any) {
     try {
       const payload = {
         email: user.email,
         sub: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
+        avatar: user.avatar,
         role: user.role,
       };
-      const refreshToken = this.genRefreshToken(payload);
-      const expiredTime = this.configService.get<string>(
-        'JWT_REFRESH_EXPIRES_IN',
-      );
-      const maxAge: number =
-        ms(expiredTime as ms.StringValue) || 15 * 60 * 1000;
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: true,
-        maxAge: maxAge,
-      });
+
       const accessToken = this.jwtService.sign(payload, {
         expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '15m',
       });
 
       return {
-        access_token: accessToken,
+        success: true,
+        message: 'Token refreshed successfully',
         user: {
-          email: user.email,
+          ...payload,
+          providers: user.providers,
         },
+        accessToken,
       };
     } catch (error) {
       this.logger.error('Error refreshing token', error.stack);
@@ -121,16 +155,16 @@ export class AuthService {
     return refreshToken;
   }
 
-  private async createTokensAndResponse(user: any, res: Response) {
+  private async createTokensAndResponse(user: any, res: Response, rememberMe: boolean = false) {
     const payload = {
       email: user.email,
       sub: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      avatar: user.avatar,
       role: user.role,
     };
 
-    // Kiểm tra active (chỉ cho local user chưa verify)
     if (!user.isActive) {
       await this.usersService.sendVerificationAccount(user.email);
       return {
@@ -143,13 +177,20 @@ export class AuthService {
     const expiredTime = this.configService.get<string>(
       'JWT_REFRESH_EXPIRES_IN',
     );
-    const maxAge: number = ms(expiredTime as ms.StringValue) || 15 * 60 * 1000;
+    const maxAge: number | undefined = rememberMe
+      ? ms(expiredTime as ms.StringValue) || 15 * 60 * 1000
+      : undefined;
 
-    res.cookie('refreshToken', refreshToken, {
+    const cookieOptions: any = {
       httpOnly: true,
       secure: true,
-      maxAge: maxAge,
-    });
+    };
+
+    if (maxAge) {
+      cookieOptions.maxAge = maxAge;
+    }
+
+    res.cookie('refreshToken', refreshToken, cookieOptions);
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
@@ -160,7 +201,7 @@ export class AuthService {
       message: 'Login successful',
       user: {
         ...payload,
-        providers: user.providers, // Trả về danh sách providers
+        providers: user.providers,
       },
       accessToken,
     };

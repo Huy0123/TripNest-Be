@@ -6,7 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './modules/auth/auth.module';
-import { UserProfilesModule } from './modules/user_profiles/user_profiles.module';
+import { ProfilesModule } from './modules/profiles/profiles.module';
 import { UsersModule } from './modules/users/users.module';
 import { LocationModule } from './modules/location/location.module';
 import { ToursModule } from './modules/tours/tours.module';
@@ -68,7 +68,7 @@ import { DatabaseModule } from './database/database.module';
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
-    UserProfilesModule,
+    ProfilesModule,
     LocationModule,
     ToursModule,
     BookingsModule,
