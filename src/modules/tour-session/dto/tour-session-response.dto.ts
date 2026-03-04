@@ -19,7 +19,13 @@ export class TourSessionResponseDto {
   bookedCount: number;
 
   @Expose()
-  price: number;
+  adultPrice: number;
+
+  @Expose()
+  childrenPrice: number;
+
+  @Expose()
+  discount: number;
 
   @Expose()
   status: DepartureStatus;

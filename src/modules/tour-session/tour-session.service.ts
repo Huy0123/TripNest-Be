@@ -10,6 +10,8 @@ import { UpdateTourSessionDto } from './dto/update-tour-session.dto';
 import { TourSession } from './entities/tour-session.entity';
 import { Tour } from '../tours/entities/tour.entity';
 import { DepartureStatus } from 'src/enums/departure-status.enum';
+import dayjs from 'dayjs';
+import { EventsGateway } from '../websockets/events.gateway';
 
 @Injectable()
 export class TourSessionService {
@@ -18,6 +20,7 @@ export class TourSessionService {
     private readonly tourSessionRepository: Repository<TourSession>,
     @InjectRepository(Tour)
     private readonly tourRepository: Repository<Tour>,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   async create(
@@ -34,8 +37,8 @@ export class TourSessionService {
     }
 
     // Kiểm tra ngày bắt đầu không được trong quá khứ
-    const startDate = new Date(createTourSessionDto.startDate);
-    if (startDate < new Date()) {
+    const startDate = dayjs(createTourSessionDto.startDate);
+    if (startDate.isBefore(dayjs().startOf('day'))) {
       throw new BadRequestException('Start date cannot be in the past');
     }
 
@@ -43,7 +46,7 @@ export class TourSessionService {
       const tourSession = this.tourSessionRepository.create({
         ...createTourSessionDto,
         tour,
-        startDate,
+        startDate: startDate.toDate(),
       });
       return await this.tourSessionRepository.save(tourSession);
     } catch (error) {
@@ -55,7 +58,7 @@ export class TourSessionService {
 
   async findAll(): Promise<TourSession[]> {
     return await this.tourSessionRepository.find({
-      relations: ['tour'],
+      relations: ['tour', 'tour.detail'],
       order: { startDate: 'ASC' },
     });
   }
@@ -63,7 +66,7 @@ export class TourSessionService {
   async findOne(id: string): Promise<TourSession> {
     const tourSession = await this.tourSessionRepository.findOne({
       where: { id },
-      relations: ['tour', 'bookings'],
+      relations: ['tour', 'tour.detail', 'bookings'],
     });
 
     if (!tourSession) {
@@ -133,7 +136,7 @@ export class TourSessionService {
   async findByTour(tourId: string): Promise<TourSession[]> {
     return await this.tourSessionRepository.find({
       where: { tour: { id: tourId } },
-      relations: ['tour'],
+      relations: ['tour', 'tour.detail'],
       order: { startDate: 'ASC' },
     });
   }
@@ -142,6 +145,7 @@ export class TourSessionService {
     return await this.tourSessionRepository
       .createQueryBuilder('session')
       .leftJoinAndSelect('session.tour', 'tour')
+      .leftJoinAndSelect('tour.detail', 'detail')
       .where('session.status = :status', { status: DepartureStatus.OPEN })
       .andWhere('session.startDate >= :now', { now: new Date() })
       .andWhere('session.bookedCount < session.capacity')
@@ -158,7 +162,7 @@ export class TourSessionService {
         startDate: MoreThanOrEqual(new Date()),
         status: DepartureStatus.OPEN,
       },
-      relations: ['tour'],
+      relations: ['tour', 'tour.detail'],
       order: { startDate: 'ASC' },
     });
   }
@@ -178,5 +182,13 @@ export class TourSessionService {
     }
 
     await this.tourSessionRepository.save(session);
+
+    // Emit event
+    this.eventsGateway.broadcastSessionUpdate(
+      session.id,
+      session.bookedCount,
+      session.capacity,
+      session.status,
+    );
   }
 }

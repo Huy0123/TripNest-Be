@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { DepartureStatus } from 'src/enums/departure-status.enum';
+import { DepartureStatus } from '@/enums/departure-status.enum';
 
 export class CreateTourSessionDto {
   @IsString()
@@ -26,9 +26,18 @@ export class CreateTourSessionDto {
 
   @IsDecimal({ decimal_digits: '2' })
   @Type(() => Number)
-  price: number;
+  adultPrice: number;
+
+  @IsDecimal({ decimal_digits: '2' })
+  @Type(() => Number)
+  childrenPrice: number;
 
   @IsOptional()
   @IsEnum(DepartureStatus)
   status?: DepartureStatus;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  discount?: number;
 }

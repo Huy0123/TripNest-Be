@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -15,9 +16,6 @@ import {
 export class TourSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @ManyToOne(() => Tour, (tour) => tour.sessions, { onDelete: 'CASCADE' })
-  tour: Tour;
 
   @Column({ type: 'timestamptz' })
   startDate: Date;
@@ -29,7 +27,13 @@ export class TourSession {
   bookedCount: number;
 
   @Column({ type: 'numeric', precision: 10 })
-  price: number;
+  adultPrice: number;
+
+  @Column({ type: 'numeric', precision: 10, default: 0 })
+  childrenPrice: number;
+
+  @Column({ type: 'int', default: 0 })
+  discount: number;
 
   @Column({
     type: 'enum',
@@ -46,4 +50,7 @@ export class TourSession {
 
   @OneToMany(() => Booking, (booking) => booking.session)
   bookings: Booking[];
+
+  @ManyToOne(() => Tour, (tour) => tour.sessions, { onDelete: 'CASCADE' })
+  tour: Tour;
 }

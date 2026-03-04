@@ -3,14 +3,17 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
-  IsDecimal,
+  IsNumber,
   IsBoolean,
   Min,
+  Max,
   IsArray,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateTourDetailDto } from './create-tour-detail.dto';
+import { CreateTourDetailDto } from '../../tour-details/dto/create-tour-detail.dto';
+import { StayOption } from '@/enums/stay.enum';
 
 export class CreateTourDto {
   @IsString()
@@ -22,33 +25,39 @@ export class CreateTourDto {
   @Type(() => Number)
   duration: number;
 
-  @IsString()
-  @IsNotEmpty()
-  guideService: string;
+  @IsArray()
+  @IsString({ each: true })
+  guideService: string[];
 
   @IsOptional()
   @IsString()
   image?: string;
 
-  @IsDecimal({ decimal_digits: '2' })
+  @IsNumber()
   @Type(() => Number)
   price: number;
 
   @IsOptional()
-  @IsBoolean()
-  isPopular?: boolean;
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  discount?: number;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  departureLocationId?: string;
+  departureLocationId: string;
 
-  @IsOptional()
+  @IsNotEmpty()
+  @IsEnum(StayOption)
+  stayOption: StayOption;
+
+  @IsNotEmpty()
   @IsArray()
   @IsString({ each: true })
-  destinationIds?: string[];
+  destinationIds: string[];
 
-  @IsOptional()
   @ValidateNested()
   @Type(() => CreateTourDetailDto)
-  detail?: CreateTourDetailDto;
+  detail: CreateTourDetailDto;
 }

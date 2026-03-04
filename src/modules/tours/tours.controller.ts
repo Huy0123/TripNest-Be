@@ -12,14 +12,15 @@ import {
   ValidationPipe,
   UseInterceptors,
   ClassSerializerInterceptor,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Public } from '@/decorators/public.decorator';
 import { ToursService } from './tours.service';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
-import { TourResponseDto } from './dto/tour-response.dto';
 import { ToursQueryDto } from './dto/tours-query.dto';
-import { plainToClass } from 'class-transformer';
+import { Message } from '@/decorators/message.decorator';
 
 @Controller('tours')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -28,86 +29,54 @@ export class ToursController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Message('Tour created successfully')
   async create(@Body(ValidationPipe) createTourDto: CreateTourDto) {
-    const tour = await this.toursService.create(createTourDto);
-    return {
-      message: 'Tour created successfully',
-      data: plainToClass(TourResponseDto, tour, {
-        excludeExtraneousValues: true,
-      }),
-    };
+    return await this.toursService.create(createTourDto);
   }
 
   @Public()
-  @Get('featured')
-  async getFeatured() {
-    const result = await this.toursService.findAll({ isPopular: true, limit: 6 });
-    return result.data.map((tour) =>
-        plainToClass(TourResponseDto, tour, { excludeExtraneousValues: true }),
-    );
-  }
-
-  @Public()
-  @Get('popular')
-  async getPopular(@Query('limit') limit: number = 10) {
-    const result = await this.toursService.findAll({ 
-        sortBy: 'rating', 
-        sortOrder: 'DESC', 
-        limit: limit 
-    });
-    return result.data.map((tour) =>
-        plainToClass(TourResponseDto, tour, { excludeExtraneousValues: true }),
-    );
+  @Get('discount')
+  @Message('Discounted tours retrieved successfully')
+  async findByDiscount() {
+    return await this.toursService.findByDiscount();
   }
 
   @Public()
   @Get()
+  @Message('Tours retrieved successfully')
   async findAll(@Query() query: ToursQueryDto) {
-    const result = await this.toursService.findAll(query);
-
-    return {
-      message: 'Tours retrieved successfully',
-      data: result.data.map((tour) =>
-        plainToClass(TourResponseDto, tour, { excludeExtraneousValues: true }),
-      ),
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-    };
+    return await this.toursService.findAll(query);
   }
 
   @Public()
   @Get(':id')
+  @Message('Tour retrieved successfully')
   async findOne(@Param('id') id: string) {
-    const tour = await this.toursService.findOne(id);
-    return {
-      message: 'Tour retrieved successfully',
-      data: plainToClass(TourResponseDto, tour, {
-        excludeExtraneousValues: true,
-      }),
-    };
+    return await this.toursService.findOne(id);
   }
 
   @Patch(':id')
+  @Message('Tour updated successfully')
   async update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateTourDto: UpdateTourDto,
   ) {
-    const tour = await this.toursService.update(id, updateTourDto);
-    return {
-      message: 'Tour updated successfully',
-      data: plainToClass(TourResponseDto, tour, {
-        excludeExtraneousValues: true,
-      }),
-    };
+    return await this.toursService.update(id, updateTourDto);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @Message('Tour deleted successfully')
   async remove(@Param('id') id: string) {
-    await this.toursService.remove(id);
-    return {
-      message: 'Tour deleted successfully',
-    };
+    return await this.toursService.remove(id);
+  }
+
+  @Patch(':id/image')
+  @UseInterceptors(FileInterceptor('file'))
+  @Message('Tour image uploaded successfully')
+  async uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return await this.toursService.uploadImage(id, file);
   }
 }
