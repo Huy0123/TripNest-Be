@@ -1,11 +1,8 @@
 import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { StayOption } from '@/enums/stay.enum';
 
 export class ToursQueryDto {
-  @IsOptional()
-  @IsString()
-  search?: string;
-
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -21,6 +18,30 @@ export class ToursQueryDto {
   @IsOptional()
   @IsString()
   destinationId?: string;
+
+  @IsOptional()
+  @IsString()
+  departureLocationId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  rating?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  duration?: number;
+
+  @IsOptional()
+  @IsEnum(StayOption)
+  stayOption?: StayOption;
+
+  @IsOptional()
+  @IsString()
+  date?: string;
 
   @IsOptional()
   @IsString()
@@ -40,5 +61,12 @@ export class ToursQueryDto {
   @Type(() => Number)
   @IsNumber()
   @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
   limit?: number = 10;
+
+  @IsOptional()
+  isPopular?: boolean;
 }

@@ -3,85 +3,61 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
-  IsDecimal,
+  IsNumber,
   IsBoolean,
   Min,
   Max,
-  IsIn,
+  IsArray,
+  ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateTourDetailDto } from '../../tour-details/dto/create-tour-detail.dto';
+import { StayOption } from '@/enums/stay.enum';
 
 export class CreateTourDto {
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsString()
-  shortDescription?: string;
-
   @IsInt()
   @Min(1)
-  @Max(365)
   @Type(() => Number)
   duration: number;
 
+  @IsArray()
+  @IsString({ each: true })
+  guideService: string[];
+
+  @IsOptional()
+  @IsString()
+  image?: string;
+
+  @IsNumber()
+  @Type(() => Number)
+  price: number;
+
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(100)
   @Type(() => Number)
-  nights?: number;
+  discount?: number;
 
-  @IsDecimal({ decimal_digits: '2' })
-  @Type(() => Number)
-  basePrice: number;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(['VND', 'USD', 'EUR'])
-  currency?: string;
-
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  maxParticipants: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  minParticipants?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
-
-  @IsString()
   @IsNotEmpty()
-  guideService: string;
-
-  @IsInt()
-  @Min(0)
-  @Type(() => Number)
-  quantity: number;
-
   @IsString()
+  departureLocationId: string;
+
   @IsNotEmpty()
-  language: string;
+  @IsEnum(StayOption)
+  stayOption: StayOption;
 
-  @IsString()
   @IsNotEmpty()
-  entryFees: string;
+  @IsArray()
+  @IsString({ each: true })
+  destinationIds: string[];
 
-  @IsOptional()
-  @IsString()
-  locationId?: string;
-
-  @IsOptional()
-  @IsString()
-  transportationId?: string;
+  @ValidateNested()
+  @Type(() => CreateTourDetailDto)
+  detail: CreateTourDetailDto;
 }

@@ -5,42 +5,48 @@ import {
   Entity,
   Index,
   ManyToOne,
-  OneToMany,
+  ManyToMany,
+  JoinTable,
+  JoinColumn,
   OneToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Location } from '@/modules/location/entities/location.entity';
 import { TourDetail } from '@/modules/tour-details/entities/tour-detail.entity';
-import { Review } from '@/modules/reviews/entities/review.entity';
+import { StayOption } from '@/enums/stay.enum';
 import { TourSession } from '@/modules/tour-session/entities/tour-session.entity';
-import { TourImage } from '@/modules/tour-images/entities/tour-image.entity';
+import { Review } from '@/modules/reviews/entities/review.entity';
 
 @Entity('tours')
 export class Tour {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Index()
+  @Column({unique: true})
   name: string;
 
+  @Index()
   @Column('int')
   duration: number;
 
-  @Column()
-  guideService: string;
+  @Column('simple-array', {nullable: true})
+  guideService: string[];
 
-  @Column()
-  type: string; // Family, Adult Only, ...
-
-  @Column()
+  @Column({nullable: true})
   image: string;
+
+  @Column({nullable: true})
+  imagePublicId: string;
 
   @Index()
   @Column({ default: 0 })
   price: number;
 
-  @Column({ default: 0 })
+  @Index()
+  @Column({ type: 'int', default: 0 })
   discount: number;
 
   @Index()
@@ -50,21 +56,31 @@ export class Tour {
   @Column({ default: 0 })
   reviewCount: number;
 
-  @ManyToOne(() => Location, (location) => location.tours)
-  location: Location;
+  @Index()
+  @Column({type: 'enum', enum: StayOption, nullable: true})
+  stayOption: StayOption;
 
-  @OneToOne(() => TourDetail, (detail) => detail.tourId, { cascade: true })
+  @ManyToOne(() => Location, (location) => location.departureTours)
+  departureLocation: Location;
+
+  @ManyToMany(() => Location, (location) => location.destinationTours)
+  @JoinTable({
+    name: 'tour_destinations',
+    joinColumn: { name: 'tourId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'locationId', referencedColumnName: 'id' },
+  })
+  destinations: Location[];
+
+  @OneToOne(() => TourDetail, (detail) => detail.tour, { cascade: true })
   detail: TourDetail;
 
-  @OneToMany(() => Review, (review) => review.tour, { cascade: true })
+  @OneToMany(() => TourSession, (session) => session.tour)
+  sessions: TourSession[];
+
+  @OneToMany(() => Review, (review) => review.tour)
   reviews: Review[];
 
-  @OneToMany(() => TourSession, (session) => session.tour)
-  sessions: TourSession;
-
-  @OneToMany(() => TourImage, (image) => image.tour, { cascade: true })
-  images: TourImage[];
-
+  @Index()
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

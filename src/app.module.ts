@@ -21,7 +21,6 @@ import { RolesGuard } from './guards/role.guard';
 import { CacheModule } from '@/modules/cache/cache.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatModule } from './modules/chat/chat.module';
-import { DatabaseModule } from './database/database.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -78,7 +77,6 @@ import { DatabaseModule } from './database/database.module';
     CacheModule,
     NotificationsModule,
     ChatModule,
-    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [
