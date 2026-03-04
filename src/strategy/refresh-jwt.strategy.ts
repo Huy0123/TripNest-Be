@@ -4,6 +4,7 @@ import { Request } from 'express';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '@/modules/auth/auth.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class RefreshTokenStrategy extends PassportStrategy(
@@ -35,9 +36,15 @@ export class RefreshTokenStrategy extends PassportStrategy(
       );
     }
     const user = await this.authService.findUserById(payload.sub);
-    if (!user) {
-      throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
+    if (!user || !user.hashedRefreshToken) {
+      throw new HttpException('User not found or logged out', HttpStatus.UNAUTHORIZED);
     }
+
+    const isTokenValid = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
+    if (!isTokenValid) {
+      throw new HttpException('Invalid or expired refresh token', HttpStatus.UNAUTHORIZED);
+    }
+
     return user;
   }
 }

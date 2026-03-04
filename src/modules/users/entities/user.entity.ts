@@ -2,7 +2,6 @@ import { UserRole } from '@/enums/user-role.enum';
 import { AuthProvider } from '@/enums/auth.enum';
 import { Booking } from '@/modules/bookings/entities/booking.entity';
 import { Review } from '@/modules/reviews/entities/review.entity';
-import { Profile } from '@/modules/profiles/entities/profile.entity';
 import {
   Column,
   CreateDateColumn,
@@ -20,7 +19,6 @@ import {
 @Index(['role'])
 @Index(['isActive'])
 @Index(['googleId'])
-@Index(['lastLoginAt'])
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -49,23 +47,29 @@ export class User {
   @Column({ nullable: true })
   googleId: string;
 
-  @Column({ type: 'timestamptz', nullable: true })
-  lastLoginAt?: Date;
-
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
-  @OneToOne(() => Profile, (profile) => profile.user, { cascade: true })
-  profile: Profile;
+  @Column({ nullable: true })
+  phone?: string;
+
+  @Column({ nullable: true })
+  address?: string;
+
+  @Column({ nullable: true })
+  birthDate?: Date;
 
   @Column({ nullable: true })
   avatar?: string;
 
   @Column({ nullable: true })
-  phone?: string;
+  avatarPublicId?: string;
+
+  @Column({ nullable: true })
+  hashedRefreshToken?: string;
 
   @OneToMany(() => Booking, (booking) => booking.user)
   bookings: Booking[];

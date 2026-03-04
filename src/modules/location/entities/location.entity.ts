@@ -5,7 +5,7 @@ export class Location {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({unique: true})
   city: string;
 
   @Column()

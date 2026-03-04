@@ -6,7 +6,6 @@ import { User } from './entities/user.entity';
 import { BullModule } from '@nestjs/bullmq';
 import { NAME_REGISTER } from '@/enums/name-register.enum';
 import { CacheModule } from '../cache/cache.module';
-import { ProfilesModule } from '../profiles/profiles.module';
 import { UploadModule } from '../upload/upload.module';
 import { AuthModule } from '../auth/auth.module';
 
@@ -26,7 +25,6 @@ import { AuthModule } from '../auth/auth.module';
         name: NAME_REGISTER.OTP,
       },
     ),
-    ProfilesModule,
     UploadModule,
   ],
   controllers: [UsersController],

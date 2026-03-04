@@ -2,7 +2,6 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsBoolean,
   IsInt,
   Min,
   Max,
@@ -27,16 +26,5 @@ export class CreateReviewDto {
   @IsOptional()
   @IsString()
   comment?: string;
-
-  @IsOptional()
-  @IsString()
-  title?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isVisible?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  isFeatured?: boolean;
 }
+

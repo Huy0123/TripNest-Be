@@ -55,7 +55,8 @@ export class AuthService {
     }
   }
 
-  logout(res: Response) {
+  async logout(userId: string, res: Response) {
+    await this.usersService.updateHashedRefreshToken(userId, null);
     res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: true,
@@ -109,6 +110,21 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     return await this.usersService.sendVerificationAccount(email);
+  }
+
+  async forgotPassword(email: string) {
+    return await this.usersService.sendForgotPasswordOtp(email);
+  }
+
+  async verifyForgotPasswordOtp(email: string, otp: string) {
+    return await this.usersService.verifyForgotPasswordOtp(email, otp);
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string, confirmNewPassword: string) {
+    if (newPassword !== confirmNewPassword) {
+      throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
+    }
+    return await this.usersService.resetPassword(email, otp, newPassword);
   }
 
   async findUserById(id: string) {
@@ -174,6 +190,9 @@ export class AuthService {
     }
 
     const refreshToken = this.genRefreshToken(payload);
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    await this.usersService.updateHashedRefreshToken(user.id, hashedRefreshToken);
+
     const expiredTime = this.configService.get<string>(
       'JWT_REFRESH_EXPIRES_IN',
     );

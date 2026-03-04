@@ -1,6 +1,7 @@
 import { TourSession } from '@/modules/tour-session/entities/tour-session.entity';
 import { User } from '@/modules/users/entities/user.entity';
 import { Payment } from '@/modules/payments/entities/payment.entity';
+import { Promotion } from '@/modules/promotions/entities/promotion.entity';
 import {
   Column,
   CreateDateColumn,
@@ -33,7 +34,7 @@ export class Booking {
   user: User;
 
   @ManyToOne(() => TourSession, (session) => session.bookings, {
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
     eager: true,
   })
   session: TourSession;
@@ -43,9 +44,6 @@ export class Booking {
 
   @Column({ type: 'int', default: 0, comment: 'Số trẻ em (2-11 tuổi)' })
   children: number;
-
-  @Column({ type: 'int', default: 0, comment: 'Số em bé (dưới 2 tuổi)' })
-  infants: number;
 
   // Giá booking
   @Column({
@@ -59,11 +57,14 @@ export class Booking {
   @Column({ type: 'decimal', precision: 15, scale: 2, comment: 'Giá trẻ em' })
   childrenPrice: number;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, comment: 'Giá em bé' })
-  infantPrice: number;
-
   @Column({ type: 'decimal', precision: 15, scale: 2, comment: 'Tổng tiền' })
   totalAmount: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0, comment: 'Tiền được giảm qua Khuyến mãi' })
+  discountAmount: number;
+
+  @ManyToOne(() => Promotion, (promo) => promo.bookings, { nullable: true, onDelete: 'SET NULL' })
+  promotion?: Promotion;
 
   @Column({
     type: 'enum',
@@ -71,6 +72,9 @@ export class Booking {
     default: BookingStatus.PENDING,
   })
   status: BookingStatus;
+
+  @Column({ type: 'boolean', default: false })
+  isReminderSent: boolean;
 
   @OneToMany(() => Payment, (payment) => payment.booking)
   payments: Payment[];

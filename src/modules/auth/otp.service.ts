@@ -38,10 +38,11 @@ export class OtpService {
   async getValueOtp(name: string, email: string): Promise<OtpResult> {
     const cachedData = await this.cacheService.get<string>(`${name}:${email}`);
     if (cachedData) {
+      const data = JSON.parse(cachedData);
       return {
-        email: JSON.parse(cachedData).email || null,
-        otp: JSON.parse(cachedData).otp || null,
-        time: JSON.parse(cachedData).time || null,
+        email: data.email || null,
+        otp: data.otp || null,
+        time: data.time || null,
       };
     }
     return {

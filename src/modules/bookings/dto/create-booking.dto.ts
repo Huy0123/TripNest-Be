@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsUUID, Min, Max } from 'class-validator';
+import { IsInt, IsNotEmpty, IsUUID, Min, Max, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBookingDto {
@@ -19,9 +19,9 @@ export class CreateBookingDto {
   @Max(50)
   children: number;
 
-  @ApiProperty({ minimum: 0, maximum: 20 })
-  @IsInt()
-  @Min(0)
-  @Max(20)
-  infants: number;
+
+  @ApiProperty({ description: 'Mã giảm giá (nếu có)', required: false })
+  @IsOptional()
+  @IsString()
+  promoCode?: string;
 }

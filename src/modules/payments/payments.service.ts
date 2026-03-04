@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import * as crypto from 'crypto';
 import * as querystring from 'qs';
+import { BookingsService } from '../bookings/bookings.service';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class PaymentsService {
@@ -14,6 +16,7 @@ export class PaymentsService {
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
     private readonly configService: ConfigService,
+    private readonly bookingsService: BookingsService,
   ) {}
 
   async createPaymentUrl(bookingId: string, amount: number, ipAddr: string, locale = 'vn') {
@@ -22,20 +25,9 @@ export class PaymentsService {
     const vnpUrl = this.configService.get('VNP_URL');
     const returnUrl = this.configService.get('VNP_RETURN_URL');
 
-    const date = new Date();
-    // Format YYYYMMDDHHmmss
-    const createDate = date.toISOString().slice(0, 19).replace(/[-T:]/g, ''); 
-    // Note: ISOString is UTC. VNPay might expect local time (GMT+7). 
-    // To be safe and simple without moment-timezone:
-    // We can use a simple offset add.
-    const dateVn = new Date(date.getTime() + 7 * 60 * 60 * 1000); 
-    const createDateVn = dateVn.toISOString().slice(0, 19).replace(/[-T:]/g, '');
-
-
-    // Generate Transaction Reference
-    const txnRef = `${bookingId}_${date.getTime()}`;
-
-    // Create Transaction Record
+    
+    const createDate = dayjs().format('YYYYMMDDHHmmss');
+    const txnRef = `${bookingId}_${dayjs().valueOf()}`;
     const transaction = this.transactionRepository.create({
       bookingId,
       amount,
@@ -54,10 +46,10 @@ export class PaymentsService {
     vnp_Params['vnp_TxnRef'] = txnRef;
     vnp_Params['vnp_OrderInfo'] = `Thanh toan booking ${bookingId}`;
     vnp_Params['vnp_OrderType'] = 'other';
-    vnp_Params['vnp_Amount'] = amount * 100; // VNPay uses cents (x100)
+    vnp_Params['vnp_Amount'] = amount * 100;
     vnp_Params['vnp_ReturnUrl'] = returnUrl;
     vnp_Params['vnp_IpAddr'] = ipAddr;
-    vnp_Params['vnp_CreateDate'] = createDateVn;
+    vnp_Params['vnp_CreateDate'] = createDate;
 
     return this.sortAndSign(vnp_Params, vnpUrl, secretKey);
   }
@@ -72,9 +64,8 @@ export class PaymentsService {
     return vnpUrl + '?' + querystring.stringify(vnp_Params, { encode: false });
   }
 
-  // Helper to sort params alphabetically
   sortObject(obj: any) {
-    const sorted = {};
+    const sorted: Record<string, string> = {};
     const str: string[] = [];
     let key;
     for (key in obj) {
@@ -83,21 +74,8 @@ export class PaymentsService {
       }
     }
     str.sort();
-    for (const s of str) {
-        // We need to find the original key that matches this encoded key?
-        // Actually usually we sort keys. 
-        // VNPay standard: sort keys. 
-        // The previous code had `sorted[str[key]]` which was confusing indices.
-        // Let's iterate sorted keys.
-        // But `str` contains encoded keys. 
-        // Simpler implementation:
-        // Object.keys(obj).sort()...
-    }
-    
-    // Correct logic:
-    const sortedKeys = Object.keys(obj).sort();
-    for (const key of sortedKeys) {
-        sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, '+');
+    for (key = 0; key < str.length; key++) {
+      sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, '+');
     }
     return sorted;
   }
@@ -117,18 +95,17 @@ export class PaymentsService {
     if (secureHash === signed) {
       const txnRef = query['vnp_TxnRef'];
       const responseCode = query['vnp_ResponseCode'];
-      // Update transaction status
-      // We might want to find transaction by txnRef
       const transaction = await this.transactionRepository.findOne({ where: { transactionCode: txnRef } });
       if (transaction) {
          if (responseCode === '00') {
              transaction.status = 'PAID';
              transaction.responseCode = responseCode;
              transaction.payDate = query['vnp_PayDate'];
-             // TODO: Update Booking Status via BookingsService or Event
+             await this.bookingsService.confirmPaymentSuccess(transaction.bookingId);
          } else {
              transaction.status = 'FAILED';
              transaction.responseCode = responseCode;
+             await this.bookingsService.handlePaymentFailure(transaction.bookingId);
          }
          await this.transactionRepository.save(transaction);
       }
@@ -158,7 +135,6 @@ export class PaymentsService {
             return { RspCode: '01', Message: 'Order not found' };
         }
         
-        // check amount
         const amount = Number(query['vnp_Amount']) / 100;
         if (amount !== transaction.amount) {
              return { RspCode: '04', Message: 'Invalid amount' };
@@ -172,14 +148,14 @@ export class PaymentsService {
              transaction.status = 'PAID';
              transaction.responseCode = rspCode;
              transaction.payDate = query['vnp_PayDate'];
-             await this.transactionRepository.save(transaction);
-              // TODO: Trigger Booking Success Event
+             await this.bookingsService.confirmPaymentSuccess(transaction.bookingId);
              return { RspCode: '00', Message: 'Confirm Success' };
         } else {
              transaction.status = 'FAILED';
              transaction.responseCode = rspCode;
              await this.transactionRepository.save(transaction);
-             return { RspCode: '00', Message: 'Confirm Success' }; // IPN expects 00 for handling ack even if payment failed
+             await this.bookingsService.handlePaymentFailure(transaction.bookingId);
+             return { RspCode: '00', Message: 'Confirm Success' };
         }
     } else {
         return { RspCode: '97', Message: 'Invalid Checksum' };

@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { Review } from './entities/review.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Tour } from '../tours/entities/tour.entity';
 import { User } from '../users/entities/user.entity';
+import { Booking } from '../bookings/entities/booking.entity';
 import { CacheService } from '../cache/cache.service';
+import { BookingStatus } from '@/enums/booking-status.enum';
 
 @Injectable()
 export class ReviewsService {
@@ -17,6 +19,8 @@ export class ReviewsService {
     private readonly tourRepository: Repository<Tour>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Booking)
+    private readonly bookingRepository: Repository<Booking>,
     private readonly cacheService: CacheService,
   ) {}
   async create(createReviewDto: CreateReviewDto) {
@@ -27,16 +31,28 @@ export class ReviewsService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
+    const hasValidBooking = await this.bookingRepository.findOne({
+      where: {
+        user: { id: userId },
+        session: { tour: { id: tourId } },
+        status: In([BookingStatus.PAID]),
+      },
+    });
+
+    if (!hasValidBooking) {
+      throw new ForbiddenException(
+        'You can only review tours that you have booked and paid for.',
+      );
+    }
+
     const review = this.reviewRepository.create({
       tour,
       user,
       rating,
       comment,
     });
-    
+
     await this.reviewRepository.save(review);
-    
-    // Invalidate cache
     await this.cacheService.del(`reviews:${tourId}`);
 
     return review;
@@ -52,19 +68,19 @@ export class ReviewsService {
       order: { createdAt: 'DESC' },
     });
     
-    await this.cacheService.set(cacheKey, reviews, 1800000); // 30 mins
+    await this.cacheService.set(cacheKey, reviews, 1800_000); // 30 mins
     return reviews;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} review`;
+  findOne(id: string) {
+    return this.reviewRepository.findOne({ where: { id } });
   }
 
-  update(id: number, updateReviewDto: UpdateReviewDto) {
-    return `This action updates a #${id} review`;
+  update(id: string, updateReviewDto: UpdateReviewDto) {
+    return this.reviewRepository.update(id, updateReviewDto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} review`;
+  remove(id: string) {
+    return this.reviewRepository.softDelete(id);
   }
 }
