@@ -3,14 +3,11 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   Req,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
-import { UpdateBookingDto } from './dto/update-booking.dto';
 
 @Controller('bookings')
 export class BookingsController {
@@ -18,15 +15,30 @@ export class BookingsController {
 
   @Post()
   async create(@Body() createBookingDto: CreateBookingDto, @Req() req: any) {
-    const userId = req.user?.id; // From JWT auth
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
+    const userId = req.user?.id;
     return await this.bookingsService.createBooking(createBookingDto, userId);
+  }
+
+  @Get()
+  async findAllByUser(@Req() req: any) {
+    const userId = req.user?.id;
+    return await this.bookingsService.findAllByUserId(userId);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.id;
+    return await this.bookingsService.findOne(id, userId);
   }
 
   @Post(':id/refund')
   refund(@Param('id') id: string) {
     return this.bookingsService.refundBooking(id);
+  }
+
+  @Post(':id/cancel')
+  async cancel(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.id;
+    return await this.bookingsService.cancelBooking(id, userId);
   }
 }

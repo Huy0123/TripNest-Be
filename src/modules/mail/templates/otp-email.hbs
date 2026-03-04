@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} - {{appName}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 540px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .header {
+            padding: 24px 32px;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #ffffff;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -0.025em;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        .greeting {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: #374151;
+        }
+
+        .message {
+            font-size: 15px;
+            margin-bottom: 24px;
+            color: #4b5563;
+        }
+
+        .otp-container {
+            background-color: #f3f4f6;
+            border-radius: 6px;
+            padding: 24px;
+            text-align: center;
+            margin: 24px 0;
+        }
+
+        .otp-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .otp-code {
+            font-size: 32px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .otp-expire {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 12px;
+        }
+
+        .security-notice {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .support-info {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 16px;
+        }
+
+        .footer {
+            background-color: #f9fafb;
+            padding: 24px 32px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer p {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .link {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+                border: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>{{appName}}</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                Xin chào {{firstName}} {{lastName}},
+            </div>
+
+            <div class="message">
+                {{description}}
+            </div>
+
+            <!-- OTP Box -->
+            <div class="otp-container">
+                <div class="otp-label">Mã xác thực (OTP)</div>
+                <div class="otp-code">{{otp}}</div>
+                <div class="otp-expire">Mã có hiệu lực trong {{expireTime}} phút</div>
+            </div>
+
+            <!-- Security Notice -->
+            <div class="security-notice">
+                <strong>Lưu ý bảo mật:</strong> Không chia sẻ mã này với bất kỳ ai. Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email và kiểm tra lại bảo mật tài khoản.
+            </div>
+
+            <div class="support-info">
+                Cần hỗ trợ? Liên hệ <a href="mailto:{{supportEmail}}" class="link">{{supportEmail}}</a> hoặc hotline {{supportPhone}}.
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>&copy; {{currentYear}} {{appName}}. Tất cả quyền được bảo lưu.</p>
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+        </div>
+    </div>
+</body>
+
+</html>

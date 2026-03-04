@@ -75,7 +75,7 @@
         }
 
         .tour-title::before {
-            content: "🌟";
+            content: "";
             margin-right: 10px;
         }
 
@@ -227,7 +227,7 @@
         <div class="content">
             <!-- Reminder Banner -->
             <div class="reminder-banner">
-                <h2>🎒 Sẵn sàng cho chuyến đi!</h2>
+                <h2>Sẵn sàng cho chuyến đi!</h2>
                 <div class="countdown">{{daysUntilTrip}}</div>
                 <p>ngày nữa là khởi hành</p>
             </div>
@@ -246,19 +246,19 @@
                 <div class="tour-title">{{tourName}}</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                     <div>
-                        <strong>📅 Ngày khởi hành:</strong><br>
+                        <strong>Ngày khởi hành:</strong><br>
                         {{departureDate}}
                     </div>
                     <div>
-                        <strong>⏰ Thời gian tập trung:</strong><br>
+                        <strong>Thời gian tập trung:</strong><br>
                         {{departureTime}}
                     </div>
                     <div>
-                        <strong>📍 Điểm tập trung:</strong><br>
+                        <strong>Điểm tập trung:</strong><br>
                         {{meetingPoint}}
                     </div>
                     <div>
-                        <strong>🕐 Thời gian:</strong><br>
+                        <strong>Thời gian:</strong><br>
                         {{duration}} ngày {{nights}} đêm
                     </div>
                 </div>
@@ -267,22 +267,18 @@
             <!-- Important Information Grid -->
             <div class="info-grid">
                 <div class="info-card">
-                    <div class="info-icon">🎫</div>
                     <div class="info-title">Mã đặt tour</div>
                     <div class="info-value">{{bookingCode}}</div>
                 </div>
                 <div class="info-card">
-                    <div class="info-icon">👥</div>
                     <div class="info-title">Số lượng khách</div>
                     <div class="info-value">{{totalGuests}} người</div>
                 </div>
                 <div class="info-card">
-                    <div class="info-icon">👨‍🏫</div>
                     <div class="info-title">Hướng dẫn viên</div>
                     <div class="info-value">{{guideName}}</div>
                 </div>
                 <div class="info-card">
-                    <div class="info-icon">📞</div>
                     <div class="info-title">Liên hệ HDV</div>
                     <div class="info-value">{{guidePhone}}</div>
                 </div>
@@ -291,7 +287,7 @@
             <!-- Weather Information -->
             {{#if weatherInfo}}
             <div class="weather-info">
-                <h3 style="margin-bottom: 15px;">🌤️ Thông tin thời tiết dự báo</h3>
+                <h3 style="margin-bottom: 15px;">Thông tin thời tiết dự báo</h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
                     {{#each weatherInfo}}
                     <div>
@@ -307,7 +303,7 @@
 
             <!-- Preparation Checklist -->
             <div class="checklist">
-                <h3>📋 Danh sách chuẩn bị</h3>
+                <h3>Danh sách chuẩn bị</h3>
 
                 <div class="checklist-item">
                     <div class="checkbox">✓</div>
@@ -366,24 +362,24 @@
 
             <!-- Contact Information -->
             <div class="contact-section">
-                <h4 style="margin-bottom: 15px; color: #856404;">📞 Thông tin liên hệ</h4>
+                <h4 style="margin-bottom: 15px; color: #856404;">Thông tin liên hệ</h4>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div>
                         <strong>Hướng dẫn viên:</strong><br>
                         {{guideName}}<br>
-                        📱 {{guidePhone}}
+                        Tel: {{guidePhone}}
                     </div>
                     <div>
                         <strong>Văn phòng:</strong><br>
                         {{supportPhone}}<br>
-                        📧 {{supportEmail}}
+                        Email: {{supportEmail}}
                     </div>
                 </div>
 
                 <!-- Emergency Contact -->
                 <div class="emergency-contact">
-                    <strong>🚨 Liên hệ khẩn cấp 24/7:</strong><br>
+                    <strong>Liên hệ khẩn cấp 24/7:</strong><br>
                     Hotline: <strong>{{emergencyPhone}}</strong><br>
                     Zalo/WhatsApp: <strong>{{emergencyZalo}}</strong>
                 </div>
@@ -392,7 +388,7 @@
             <!-- Important Notes -->
             {{#if importantNotes}}
             <div style="background-color: #e8f5e8; border-left: 4px solid #27ae60; padding: 20px; margin: 20px 0;">
-                <h4 style="color: #27ae60; margin-bottom: 15px;">📌 Lưu ý quan trọng</h4>
+                <h4 style="color: #27ae60; margin-bottom: 15px;">Lưu ý quan trọng</h4>
                 <ul style="padding-left: 20px;">
                     {{#each importantNotes}}
                     <li style="margin: 8px 0;">{{this}}</li>
@@ -404,15 +400,15 @@
             <!-- Action Buttons -->
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{{itineraryUrl}}" class="btn">
-                    📄 Xem Lịch Trình Chi Tiết
+                    Xem Lịch Trình Chi Tiết
                 </a>
                 <a href="{{contactGuideUrl}}" class="btn">
-                    💬 Liên Hệ Hướng Dẫn Viên
+                    Liên Hệ Hướng Dẫn Viên
                 </a>
             </div>
 
             <p style="text-align: center; font-style: italic; color: #666; margin-top: 30px;">
-                Chúc bạn có một chuyến du lịch thật vui vẻ và an toàn! 🌟✈️🏖️
+                Chúc bạn có một chuyến du lịch thật vui vẻ và an toàn!
             </p>
         </div>
 

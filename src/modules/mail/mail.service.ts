@@ -31,7 +31,9 @@ export class MailService {
     const expireTime = this.configService.get<number>('OTP_EXPIRE_TIME') || 10;
     const context = {
       ...verifyAccount,
-      verificationCode: verifyAccount.otp,
+      title: 'Xác thực tài khoản',
+      description: `Cảm ơn bạn đã đăng ký tài khoản tại ${appName}. Vui lòng sử dụng mã xác thực dưới đây để hoàn tất quá trình đăng ký.`,
+      otp: verifyAccount.otp,
       appName,
       supportEmail,
       supportPhone,
@@ -45,8 +47,8 @@ export class MailService {
     try {
       await this.mailerService.sendMail({
         to,
-        subject: '[TripNest] Xác thực tài khoản của bạn',
-        template: 'verify-account',
+        subject: `[${appName}] Xác thực tài khoản của bạn`,
+        template: 'otp-email',
         context,
       });
       this.logger.log(`Verification email sent successfully to ${to}`);
@@ -70,20 +72,35 @@ export class MailService {
       this.configService.get<string>('SUPPORT_EMAIL') || 'support@tripnest.com';
     const currentYear = dayjs().year();
     const expireTime = this.configService.get<number>('OTP_EXPIRE_TIME') || 10;
+    const supportPhone =
+      this.configService.get<string>('SUPPORT_PHONE') || 'N/A';
+    const companyAddress =
+      this.configService.get<string>('COMPANY_ADDRESS') || 'N/A';
+    const facebookUrl = this.configService.get<string>('FACEBOOK_URL') || '#';
+    const instagramUrl = this.configService.get<string>('INSTAGRAM_URL') || '#';
+    const websiteUrl = this.configService.get<string>('WEBSITE_URL') || '#';
 
     const context = {
       ...data,
+      title: 'Quên mật khẩu',
+      description: `Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại ${appName}. Vui lòng sử dụng mã xác thực (OTP) dưới đây:`,
+      otp: data.otp,
       appName,
       supportEmail,
       currentYear,
-      expireTime,
+      expireTime, 
+      supportPhone,
+      companyAddress,
+      facebookUrl,
+      instagramUrl,
+      websiteUrl,
     };
 
     try {
       await this.mailerService.sendMail({
         to,
-        subject: 'Reset your password',
-        template: 'forgot-password',
+        subject: `[${appName}] Đặt lại mật khẩu của bạn`,
+        template: 'otp-email',
         context,
       });
       this.logger.log(`Forgot password email sent successfully to ${to}`);
@@ -139,6 +156,7 @@ export class MailService {
       tourName: string;
       amount: number;
       paymentDate: string;
+      customerName: string;
     },
   ): Promise<{ success: boolean; message: string }> {
     this.logger.log(`Sending payment success email to ${to}`);
@@ -214,6 +232,12 @@ export class MailService {
       tourName: string;
       departureDate: string;
       daysUntilTrip: number;
+      customerName: string;
+      departureTime?: string;
+      meetingPoint?: string;
+      duration?: number;
+      nights?: number;
+      totalGuests?: number;
     },
   ): Promise<{ success: boolean; message: string }> {
     this.logger.log(`Sending trip reminder email to ${to}`);

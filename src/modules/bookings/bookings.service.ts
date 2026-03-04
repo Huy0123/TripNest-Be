@@ -5,12 +5,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Booking } from './entities/booking.entity';
 import { DataSource, Repository } from 'typeorm';
 import { CacheService } from '../cache/cache.service';
-import { TourSessionService } from '../tour-session/tour-session.service';
 import { TourSession } from '../tour-session/entities/tour-session.entity';
 import { BookingStatus } from '@/enums/booking-status.enum';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
+import { EventsGateway } from '@/modules/websockets/events.gateway'
+import { Promotion, DiscountType } from '../promotions/entities/promotion.entity';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class BookingsService {
@@ -20,20 +22,26 @@ export class BookingsService {
     private readonly bookingsRepository: Repository<Booking>,
     private readonly dataSource: DataSource,
     private readonly cacheService: CacheService,
-    private readonly tourSessionsService: TourSessionService,
     @InjectQueue('booking') private readonly bookingQueue: Queue,
+    private readonly eventsGateway: EventsGateway,
+    private readonly mailService: MailService,
   ) {}
 
   async createBooking(createBookingDto: CreateBookingDto, userId: string) {
-    const { sessionId, adults, children, infants } = createBookingDto;
+    const { sessionId, adults, children, promoCode } = createBookingDto;
     const totalPeople = adults + children;
+
+    const cacheKey = `booking_lock:${userId}:${sessionId}`;
+    const isLocked = await this.cacheService.acquireLock(cacheKey, 5_000); // 5ms
+    if (!isLocked) {
+      throw new HttpException('Please wait a moment before booking again', HttpStatus.TOO_MANY_REQUESTS);
+    }
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction('SERIALIZABLE');
 
     try {
-      // 1. Lock session row with FOR UPDATE
       const session = await queryRunner.manager
         .createQueryBuilder(TourSession, 'session')
         .where('session.id = :id', { id: sessionId })
@@ -44,43 +52,76 @@ export class BookingsService {
         throw new HttpException('Tour session not found', HttpStatus.NOT_FOUND);
       }
 
-      // 2. Check capacity atomically
       if (session.bookedCount + totalPeople > session.capacity) {
         throw new HttpException('Tour session is fully booked', HttpStatus.BAD_REQUEST);
       }
-
-      // 3. Calculate prices
-      const adultPrice = Number(session.price);
-      const childPrice = Number(session.price) * 0.75;
-      const infantPrice = Number(session.price) * 0.1;
+      const adultPrice = Number(session.adultPrice);
+      const childPrice = Number(session.childrenPrice);
       
-      const totalAmount = 
-        (adults * adultPrice) + 
-        (children * childPrice) + 
-        (infants * infantPrice);
+      let totalAmount = (adults * adultPrice) + (children * childPrice);
 
-      // 4. Create booking
+      let discountAmount = 0;
+      let appliedPromotion: Promotion | null = null;
+
+      if (promoCode) {
+        appliedPromotion = await queryRunner.manager
+          .createQueryBuilder(Promotion, 'promo')
+          .where('promo.code = :code', { code: promoCode })
+          .setLock('pessimistic_write')
+          .getOne();
+
+        if (!appliedPromotion) {
+          throw new HttpException('Invalid promo code', HttpStatus.BAD_REQUEST);
+        }
+        if (!appliedPromotion.isActive) {
+          throw new HttpException('Promo code is not active', HttpStatus.BAD_REQUEST);
+        }
+        
+        const now = new Date();
+        if (now < appliedPromotion.startDate || now > appliedPromotion.endDate) {
+          throw new HttpException('Promo code is expired or not yet valid', HttpStatus.BAD_REQUEST);
+        }
+        if (appliedPromotion.usageLimit > 0 && appliedPromotion.usedCount >= appliedPromotion.usageLimit) {
+          throw new HttpException('Promo code usage limit has been reached', HttpStatus.BAD_REQUEST);
+        }
+        if (totalAmount < appliedPromotion.minOrderValue) {
+          throw new HttpException(`Minimum order value of ${appliedPromotion.minOrderValue} is required`, HttpStatus.BAD_REQUEST);
+        }
+
+        if (appliedPromotion.discountType === DiscountType.FIXED_AMOUNT) {
+          discountAmount = appliedPromotion.discountValue;
+        } else if (appliedPromotion.discountType === DiscountType.PERCENTAGE) {
+          discountAmount = (totalAmount * appliedPromotion.discountValue) / 100;
+          if (appliedPromotion.maxDiscount && discountAmount > appliedPromotion.maxDiscount) {
+            discountAmount = appliedPromotion.maxDiscount;
+          }
+        }
+
+        totalAmount = Math.max(0, totalAmount - discountAmount);
+
+        await queryRunner.manager.update(Promotion, appliedPromotion.id, {
+          usedCount: appliedPromotion.usedCount + 1,
+        });
+      }
+
       const booking = queryRunner.manager.create(Booking, {
         session,
         user: { id: userId } as any,
         adults,
         children,
-        infants,
         adultPrice,
         childrenPrice: childPrice,
-        infantPrice,
         totalAmount,
+        discountAmount,
+        ...(appliedPromotion ? { promotion: appliedPromotion } : {}),
         status: BookingStatus.PENDING,
       });
 
       const savedBooking = await queryRunner.manager.save(booking);
 
-      // 5. Update session capacity atomically
       await queryRunner.manager.update(TourSession, session.id, {
         bookedCount: session.bookedCount + totalPeople,
       });
-
-      // 6. Create payment record
       const payment = queryRunner.manager.create(Payment, {
         booking: savedBooking,
         amount: totalAmount,
@@ -91,30 +132,79 @@ export class BookingsService {
 
       await queryRunner.commitTransaction();
 
+      // Emit new capacity to connected clients
+      this.eventsGateway.broadcastSessionUpdate(
+        session.id,
+        session.bookedCount + totalPeople,
+        session.capacity,
+        session.status 
+      );
+
       this.logger.log(`Booking created: ${savedBooking.id} (${savedBooking.bookingCode}) for user ${userId}`);
       
-      // 7. Add timeout job AFTER commit
+      // 8. Add timeout job AFTER commit
       await this.bookingQueue.add(
         'check-payment-timeout',
         { bookingId: savedBooking.id },
         { delay: 15 * 60 * 1000 }
       );
 
+      // 9. Invalidate user's booking cache
+      await this.cacheService.del(`bookings:user:${userId}`);
+
+      // 10. Release the double-click lock early since it succeeded
+      await this.cacheService.releaseLock(cacheKey);
+
       return {  
         message: 'Booking created successfully', 
         bookingId: savedBooking.id,
         bookingCode: savedBooking.bookingCode,
         totalAmount,
+        discountAmount,
         paymentUrl: null
       };
 
     } catch (error) {
       await queryRunner.rollbackTransaction();
+      await this.cacheService.releaseLock(cacheKey); // Release lock on error too
       this.logger.error(`Booking creation failed: ${error.message}`, error.stack);
       throw error;
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async findAllByUserId(userId: string) {
+    const cacheKey = `bookings:user:${userId}`;
+    const cachedData = await this.cacheService.get<string>(cacheKey);
+    
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+
+    const bookings = await this.bookingsRepository.find({
+      where: { user: { id: userId } },
+      relations: ['session', 'session.tour'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Cache for 5 minutes
+    await this.cacheService.set(cacheKey, bookings, 300000); 
+
+    return bookings;
+  }
+
+  async findOne(bookingId: string, userId: string) {
+    const booking = await this.bookingsRepository.findOne({
+      where: { id: bookingId, user: { id: userId } },
+      relations: ['session', 'session.tour', 'payments', 'promotion'],
+    });
+
+    if (!booking) {
+      throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
+    }
+
+    return booking;
   }
 
   async refundBooking(bookingId: string) {
@@ -132,7 +222,211 @@ export class BookingsService {
           amount: booking.totalAmount, 
           reason: 'User requested' 
       });
-
       return { message: 'Refund request accepted' };
+  }
+
+  async cancelBooking(bookingId: string, userId: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const booking = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId, user: { id: userId } },
+        relations: ['session'],
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!booking) {
+        throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
+      }
+
+      if (booking.status !== BookingStatus.PENDING) {
+        throw new HttpException(
+          'Chỉ có thể hủy những booking đang chờ thanh toán',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Update Booking status to CANCELED
+      booking.status = BookingStatus.CANCELED;
+      await queryRunner.manager.save(booking);
+
+      // Refund Capacity immediately
+      if (booking.session) {
+        // Lock the session to update bookedCount
+        const session = await queryRunner.manager
+          .createQueryBuilder(TourSession, 'session')
+          .where('session.id = :id', { id: booking.session.id })
+          .setLock('pessimistic_write')
+          .getOne();
+
+        if (session) {
+          const totalPeople = booking.adults + booking.children;
+          session.bookedCount = Math.max(0, session.bookedCount - totalPeople);
+          
+          await queryRunner.manager.save(session);
+          
+          // Emit socket update for real-time capacity refresh
+          this.eventsGateway.broadcastSessionUpdate(
+            session.id,
+            session.bookedCount,
+            session.capacity,
+            session.status
+          );
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      // Clear the user's booking cache list
+      await this.cacheService.del(`bookings:user:${userId}`);
+
+      this.logger.log(`Booking ${bookingId} was manually cancelled by user ${userId}`);
+
+      return { message: 'Đã hủy booking thành công' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(`Manual cancel failed: ${error.message}`, error.stack);
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async confirmPaymentSuccess(bookingId: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const booking = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['user'],
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!booking) {
+        throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Update Booking status
+      booking.status = BookingStatus.PAID;
+      await queryRunner.manager.save(booking);
+
+      // Update associated Payment status
+      await queryRunner.manager.update(Payment, { booking: { id: bookingId } }, {
+        status: PaymentStatus.COMPLETED,
+      });
+
+      // Clear related cache
+      if (booking.user) {
+        await this.cacheService.del(`bookings:user:${booking.user.id}`);
+      }
+
+      await queryRunner.commitTransaction();
+
+      // Find and remove the timeout job so it doesn't cancel the booking later
+      const jobs = await this.bookingQueue.getDelayed();
+      for (const job of jobs) {
+        if (job.name === 'check-payment-timeout' && job.data.bookingId === bookingId) {
+          await job.remove();
+          this.logger.log(`Removed timeout job for booking ${bookingId}`);
+          break;
+        }
+      }
+
+      if (booking.user && booking.user.email) {
+        const fullSession = await this.dataSource.manager.findOne(TourSession, {
+          where: { id: booking.session.id },
+          relations: ['tour']
+        });
+        const tourName = fullSession?.tour?.name || 'Chuyến đi của bạn';
+
+        this.mailService.sendPaymentSuccessEmail(booking.user.email, {
+          bookingCode: booking.bookingCode,
+          tourName: tourName,
+          amount: booking.totalAmount,
+          paymentDate: new Date().toLocaleString('vi-VN'),
+          customerName: booking.user.lastName ? `${booking.user.firstName} ${booking.user.lastName}` : booking.user.lastName || booking.user.firstName,
+        }).catch(err => {
+          this.logger.error(`Could not send payment success email to ${booking.user.email}:`, err);
+        });
+      }
+
+      this.logger.log(`Payment confirmed successfully for booking ${bookingId}`);
+      return true;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(`Failed to confirm payment for booking ${bookingId}: ${error.message}`, error.stack);
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async handlePaymentFailure(bookingId: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const booking = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['user', 'session'],
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!booking || booking.status !== BookingStatus.PENDING) {
+        await queryRunner.rollbackTransaction();
+        return; // Already handled or not found
+      }
+
+      // 1. Update Booking status to CANCELED
+      booking.status = BookingStatus.CANCELED;
+      await queryRunner.manager.save(booking);
+
+      // 2. Update associated Payment status
+      await queryRunner.manager.update(Payment, { booking: { id: bookingId } }, {
+        status: PaymentStatus.FAILED,
+      });
+
+      // 3. Clear user cache
+      if (booking.user) {
+        await this.cacheService.del(`bookings:user:${booking.user.id}`);
+      }
+
+      // 4. Release capacity
+      if (booking.session) {
+        const session = await queryRunner.manager
+          .createQueryBuilder(TourSession, 'session')
+          .where('session.id = :id', { id: booking.session.id })
+          .setLock('pessimistic_write')
+          .getOne();
+
+        if (session) {
+          const totalPeople = booking.adults + booking.children;
+          session.bookedCount = Math.max(0, session.bookedCount - totalPeople);
+          
+          await queryRunner.manager.save(session);
+          
+          this.eventsGateway.broadcastSessionUpdate(
+            session.id,
+            session.bookedCount,
+            session.capacity,
+            session.status
+          );
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      this.logger.log(`Payment failed for booking ${bookingId}. Booking cancelled and capacity released.`);
+      
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(`Error handling payment failure for booking ${bookingId}: ${error.message}`, error.stack);
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
