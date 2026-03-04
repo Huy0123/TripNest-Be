@@ -169,16 +169,11 @@ export class UsersService {
       email,
     );
     this.logger.log(`End verifying account for ${email}`);
-    return { success: true, message: 'Account verified successfully' };
   }
 
   async findUserById(id: string) {
     const user = await this.userRepository.findOne({ where: { id } });
-    if (user) {
-      const { password, ...result } = user;
-      return result;
-    }
-    return null;
+    return user || null;
   }
 
   async createOrUpdateGoogleUser(data: GoogleDto) {
@@ -227,45 +222,6 @@ export class UsersService {
     return newUser;
   }
 
-  async uploadAvatar(userId: string, file: Express.Multer.File) {
-    this.logger.log(`Starting to upload avatar for user ID: ${userId}`);
-    try {
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      if (!user) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-      }
-
-      if (user.avatar) {
-        const publicId = this.extractPublicId(user.avatar);
-        if (publicId) {
-          try {
-            await this.uploadService.deleteImage(publicId);
-            this.logger.log(`Deleted old avatar for user ID: ${userId}`);
-          } catch (err) {
-            this.logger.warn(`Failed to delete old avatar: ${err.message}`);
-          }
-        }
-      }
-
-      const uploadedImage = await this.uploadService.uploadImage(
-        file,
-        'user_avatars',
-      );
-
-      user.avatar = uploadedImage.url;
-      await this.userRepository.save(user);
-
-      this.logger.log(`Avatar uploaded successfully for user ID: ${userId}`);
-      return {
-        message: 'Avatar uploaded successfully',
-        avatar: user.avatar,
-      };
-    } catch (error) {
-      this.logger.error(`Error uploading avatar for user ID: ${userId}`, error.stack);
-      throw error;
-    }
-  }
-
   async findAll() {
     this.logger.log('Fetching all users');
     return this.userRepository.find({
@@ -275,43 +231,71 @@ export class UsersService {
 
   async findOne(id: string) {
     this.logger.log(`Fetching user with ID: ${id}`);
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({
+      where: { id },
+    });
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
-    const { password, ...result } = user;
-    return result;
+    return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     this.logger.log(`Updating user with ID: ${id}`);
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({
+      where: { id },
+    });
 
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    if (updateUserDto.password) {
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
-    }
+    const updatedUser = Object.assign(user, updateUserDto);
 
-    if (updateUserDto.avatar !== undefined && user.avatar && user.avatar !== updateUserDto.avatar) {
-      const publicId = this.extractPublicId(user.avatar);
-      if (publicId) {
+    await this.userRepository.save(updatedUser);
+
+    return updatedUser;
+  }
+
+  async updateHashedRefreshToken(id: string, hashedRefreshToken: string | null) {
+    await this.userRepository.update(id, { hashedRefreshToken: hashedRefreshToken as any });
+  }
+
+  async uploadAvatar(userId: string, file: Express.Multer.File) {
+    this.logger.log(`Starting to upload avatar for user ID: ${userId}`);
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      if (user.avatarPublicId) {
         try {
-          await this.uploadService.deleteImage(publicId);
-          this.logger.log(`Deleted old avatar for user ID: ${id} during update`);
+          await this.uploadService.deleteImage(user.avatarPublicId);
+          this.logger.log(`Deleted old avatar for user ID: ${userId}`);
         } catch (err) {
-          this.logger.warn(`Failed to delete old avatar during update: ${err.message}`);
+          this.logger.warn(`Failed to delete old avatar: ${err.message}`);
         }
       }
-    }
 
-    const updatedUser = Object.assign(user, updateUserDto);
-    await this.userRepository.save(updatedUser);
-    
-    const { password, ...result } = updatedUser;
-    return result;
+      const uploadedImage = await this.uploadService.uploadImage(
+        file,
+        'user_avatars',
+      );
+
+      user.avatar = uploadedImage.secure_url;
+      user.avatarPublicId = uploadedImage.public_id;
+      await this.userRepository.save(user);
+
+      this.logger.log(`Avatar uploaded successfully for user ID: ${userId}`);
+      return {
+        message: 'Avatar uploaded successfully',
+        avatar: user.avatar,
+      };
+    } catch (error) {
+      this.logger.error(`Error uploading avatar for user ID: ${userId}`, error.message);
+      throw new HttpException('Failed to upload avatar', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async remove(id: string) {
@@ -322,47 +306,136 @@ export class UsersService {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    if (user.avatar) {
-      const publicId = this.extractPublicId(user.avatar);
-      if (publicId) {
-        try {
-          await this.uploadService.deleteImage(publicId);
-          this.logger.log(`Deleted avatar for user ID: ${id} during account removal`);
-        } catch (err) {
-          this.logger.warn(`Failed to delete avatar during removal: ${err.message}`);
-        }
+    if (user.avatarPublicId) {
+      try {
+        await this.uploadService.deleteImage(user.avatarPublicId);
+        this.logger.log(`Deleted avatar for user ID: ${id} during account removal`);
+      } catch (err) {
+        this.logger.warn(`Failed to delete avatar during removal: ${err.message}`);
       }
     }
 
-    await this.userRepository.softRemove(user);
+    await this.userRepository.remove(user);
     return { success: true, message: 'User deleted successfully' };
   }
 
-  private extractPublicId(url: string): string | null {
-    try {
-      if (!url || !url.includes('cloudinary.com')) return null;
-      
-      const parts = url.split('/upload/');
-      if (parts.length < 2) return null;
-      
-      const pathWithVersion = parts[1];
-      const pathParts = pathWithVersion.split('/');
-      
-      if (pathParts[0].startsWith('v')) {
-        pathParts.shift();
-      }
-      
-      const filenameWithExt = pathParts.join('/');
-      const lastDotIndex = filenameWithExt.lastIndexOf('.');
-      
-      if (lastDotIndex !== -1) {
-        return filenameWithExt.substring(0, lastDotIndex);
-      }
-      return filenameWithExt;
-    } catch (error) {
-      this.logger.error('Error extracting public ID from URL', error.stack);
-      return null;
+  // Gửi OTP quên mật khẩu
+  async sendForgotPasswordOtp(email: string) {
+    this.logger.log(`Starting forgot password OTP for ${email}`);
+    const currentTime = dayjs().valueOf();
+
+    const cachedData = await this.otpService.getValueOtp(
+      NAME_QUEUE.SEND_OTP_FORGOT_PASSWORD,
+      email,
+    );
+
+    if (cachedData.time && (currentTime - Number(cachedData.time)) / 1000 < this.timeResendEmail) {
+      this.logger.warn(`Attempt to resend forgot password OTP to ${email} too soon`);
+      throw new HttpException(
+        `Please wait before requesting another OTP: ${Math.ceil(this.timeResendEmail - (currentTime - Number(cachedData.time)) / 1000)}s`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (!user.providers?.includes(AuthProvider.LOCAL)) {
+      throw new HttpException(
+        'This account was registered via Google. Please login with Google.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    await this.otpService.genOtp(
+      NAME_QUEUE.SEND_OTP_FORGOT_PASSWORD,
+      email,
+      user.firstName || '',
+      user.lastName || '',
+      currentTime,
+    );
+
+    this.logger.log(`Forgot password OTP sent to ${email}`);
+    return {
+      success: true,
+      message: `OTP has been sent to ${email}`,
+    };
   }
+
+  // Xác minh OTP quên mật khẩu (chỉ kiểm tra, không xoá OTP)
+  async verifyForgotPasswordOtp(email: string, otp: string) {
+    this.logger.log(`Verifying forgot password OTP for ${email}`);
+
+    const cachedData = await this.otpService.validateOtp(
+      NAME_QUEUE.SEND_OTP_FORGOT_PASSWORD,
+      email,
+      otp,
+    );
+
+    if (!cachedData.success) {
+      if (cachedData.retryAfter) {
+        throw new HttpException(
+          `Too many failed attempts. Please try again after ${cachedData.retryAfter} seconds`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      throw new HttpException(
+        cachedData.message || 'Invalid OTP',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    this.logger.log(`Forgot password OTP verified successfully for ${email}`);
+    return {
+      success: true,
+      message: 'OTP verified successfully',
+    };
+  }
+
+  // Xác thực OTP và đặt lại mật khẩu
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    this.logger.log(`Starting password reset for ${email}`);
+
+    const cachedData = await this.otpService.validateOtp(
+      NAME_QUEUE.SEND_OTP_FORGOT_PASSWORD,
+      email,
+      otp,
+    );
+
+    if (!cachedData.success) {
+      if (cachedData.retryAfter) {
+        throw new HttpException(
+          `Too many failed attempts. Please try again after ${cachedData.retryAfter} seconds`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      throw new HttpException(
+        cachedData.message || 'Invalid OTP',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.save(user);
+
+    await this.otpService.deleteOtp(
+      NAME_QUEUE.SEND_OTP_FORGOT_PASSWORD,
+      email,
+    );
+
+    this.logger.log(`Password reset successfully for ${email}`);
+    return {
+      success: true,
+      message: 'Password has been reset successfully',
+    };
+  }
+
 }
 

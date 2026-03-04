@@ -128,7 +128,6 @@ export class ToursService {
       isPopular,
     } = query;
 
-    // Cache versioning and hashing
     const queryHash = Buffer.from(JSON.stringify(query)).toString('base64');
     const version = await this.cacheService.getCacheVersion('tours');
     const cacheKey = `tours:list:v${version}:${queryHash}`;
@@ -273,12 +272,10 @@ export class ToursService {
     }
 
     try {
-      // Xóa ảnh cũ trên Cloudinary nếu có
       if (tour.imagePublicId) {
         try {
           await this.uploadService.deleteImage(tour.imagePublicId);
-        } catch (err) {
-          // Không block nếu xóa ảnh cũ thất bại
+        } catch {
         }
       }
 

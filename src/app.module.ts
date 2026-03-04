@@ -6,10 +6,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './modules/auth/auth.module';
-import { ProfilesModule } from './modules/profiles/profiles.module';
 import { UsersModule } from './modules/users/users.module';
 import { LocationModule } from './modules/location/location.module';
 import { ToursModule } from './modules/tours/tours.module';
+import { TourDetailsModule } from './modules/tour-details/tour-details.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -21,6 +21,8 @@ import { RolesGuard } from './guards/role.guard';
 import { CacheModule } from '@/modules/cache/cache.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { WebSocketsModule } from './modules/websockets/websockets.module';
+import { PromotionsModule } from './modules/promotions/promotions.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -67,9 +69,9 @@ import { ChatModule } from './modules/chat/chat.module';
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
-    ProfilesModule,
     LocationModule,
     ToursModule,
+    TourDetailsModule,
     BookingsModule,
     ReviewsModule,
     PaymentsModule,
@@ -77,6 +79,8 @@ import { ChatModule } from './modules/chat/chat.module';
     CacheModule,
     NotificationsModule,
     ChatModule,
+    WebSocketsModule,
+    PromotionsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,57 +1,67 @@
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Cache } from 'cache-manager';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import Redis from 'ioredis';
 
 @Injectable()
 export class CacheService {
+  private readonly logger = new Logger(CacheService.name);
+
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject('REDIS_CLIENT') private redisClient: Redis,
   ) {}
 
   async set(key: string, value: any, ttl?: number) {
-    await this.cacheManager.set(key, value, ttl);
+    this.logger.log(`Setting cache key: ${key}`);
+    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+    if (ttl) {
+      await this.redisClient.set(key, stringValue, 'PX', ttl);
+    } else {
+      await this.redisClient.set(key, stringValue);
+    }
   }
 
   async get<T>(key: string): Promise<T | undefined> {
-    return await this.cacheManager.get<T>(key);
+    const data = await this.redisClient.get(key);
+    if (!data) return undefined;
+    return data as T;
+  }
+
+  async getCacheVersion(namespace: string): Promise<number> {
+    const versionStr = await this.redisClient.get(`${namespace}:version`);
+    return versionStr ? parseInt(versionStr, 10) : 1;
+  }
+
+  async incrementCacheVersion(namespace: string): Promise<number> {
+    return await this.redisClient.incr(`${namespace}:version`);
   }
 
   async del(key: string) {
-    await this.cacheManager.del(key);
+    this.logger.log(`Deleting cache key: ${key}`);
+    if (key.includes('*')) {
+      const keys = await this.redisClient.keys(key);
+      if (keys.length > 0) {
+        await this.redisClient.del(...keys);
+      }
+    } else {
+      await this.redisClient.del(key);
+    }
   }
 
   async getTtl(key: string): Promise<number | undefined> {
-  return typeof this.cacheManager.ttl === 'function'
-    ? this.cacheManager.ttl(key)
-    : undefined;
-}
+    this.logger.log(`Getting TTL for cache key: ${key}`);
+    return await this.redisClient.pttl(key);
+  }
 
   async acquireLock(key: string, ttl: number): Promise<boolean> {
-    const store = (this.cacheManager as any).store;
-    if (store.client && typeof store.client.set === 'function') {
-      // Use Redis SET NX if available
-      // redis v4: set(key, value, { PX: ttl, NX: true })
-      // or legacy: set(key, value, 'PX', ttl, 'NX')
-      try {
-        const result = await store.client.set(key, 'LOCKED', {
-          PX: ttl,
-          NX: true,
-        });
-        return result === 'OK';
-      } catch (e) {
-         // Fallback or error logging
-         Logger.error('Failed to acquire lock via redis client', e);
-      }
+    try {
+      const result = await this.redisClient.set(`${key}:lock`, 'LOCKED', 'PX', ttl, 'NX');
+      return result === 'OK';
+    } catch (e) {
+      Logger.error('Failed to acquire lock via redis client', e);
+      return false;
     }
-    
-    // Fallback for non-redis stores or failure: check and set (not atomic)
-    const exists = await this.cacheManager.get(key);
-    if (exists) return false;
-    await this.cacheManager.set(key, 'LOCKED', ttl);
-    return true;
   }
 
   async releaseLock(key: string): Promise<void> {
-    await this.cacheManager.del(key);
+    await this.redisClient.del(`${key}:lock`);
   }
 }

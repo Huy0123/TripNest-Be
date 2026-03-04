@@ -1,22 +1,12 @@
 import { Module } from '@nestjs/common';
-import { CacheService } from './cache.service';
-import { CacheModule as NestCacheModule } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
-import KeyvRedis from '@keyv/redis';
+import { CacheService } from './cache.service';
 import { NAME_REGISTER } from '@/enums/name-register.enum';
 import { BullModule } from '@nestjs/bullmq';
+import Redis from 'ioredis';
+
 @Module({
   imports: [
-    NestCacheModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
-        return {
-          store: new KeyvRedis(
-            `redis://${configService.get('REDIS_HOST')}:${configService.get('REDIS_PORT')}`,
-          ),
-        };
-      },
-    }),
     BullModule.registerQueue(
       {
         name: NAME_REGISTER.OTP,
@@ -29,7 +19,19 @@ import { BullModule } from '@nestjs/bullmq';
       },
     ),
   ],
-  providers: [CacheService],
-  exports: [CacheService],
+  providers: [
+    {
+      provide: 'REDIS_CLIENT',
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        return new Redis({
+          host: configService.get('REDIS_HOST') || 'localhost',
+          port: parseInt(configService.get('REDIS_PORT') || '6379', 10),
+        });
+      },
+    },
+    CacheService,
+  ],
+  exports: ['REDIS_CLIENT', CacheService],
 })
 export class CacheModule {}

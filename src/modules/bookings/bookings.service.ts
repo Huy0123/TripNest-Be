@@ -132,7 +132,6 @@ export class BookingsService {
 
       await queryRunner.commitTransaction();
 
-      // Emit new capacity to connected clients
       this.eventsGateway.broadcastSessionUpdate(
         session.id,
         session.bookedCount + totalPeople,
@@ -142,17 +141,13 @@ export class BookingsService {
 
       this.logger.log(`Booking created: ${savedBooking.id} (${savedBooking.bookingCode}) for user ${userId}`);
       
-      // 8. Add timeout job AFTER commit
       await this.bookingQueue.add(
         'check-payment-timeout',
         { bookingId: savedBooking.id },
         { delay: 15 * 60 * 1000 }
       );
 
-      // 9. Invalidate user's booking cache
       await this.cacheService.del(`bookings:user:${userId}`);
-
-      // 10. Release the double-click lock early since it succeeded
       await this.cacheService.releaseLock(cacheKey);
 
       return {  
@@ -166,7 +161,7 @@ export class BookingsService {
 
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      await this.cacheService.releaseLock(cacheKey); // Release lock on error too
+      await this.cacheService.releaseLock(cacheKey);
       this.logger.error(`Booking creation failed: ${error.message}`, error.stack);
       throw error;
     } finally {
@@ -188,8 +183,7 @@ export class BookingsService {
       order: { createdAt: 'DESC' },
     });
 
-    // Cache for 5 minutes
-    await this.cacheService.set(cacheKey, bookings, 300000); 
+    await this.cacheService.set(cacheKey, bookings, 300_000);
 
     return bookings;
   }
@@ -248,13 +242,10 @@ export class BookingsService {
         );
       }
 
-      // Update Booking status to CANCELED
       booking.status = BookingStatus.CANCELED;
       await queryRunner.manager.save(booking);
 
-      // Refund Capacity immediately
       if (booking.session) {
-        // Lock the session to update bookedCount
         const session = await queryRunner.manager
           .createQueryBuilder(TourSession, 'session')
           .where('session.id = :id', { id: booking.session.id })
@@ -264,10 +255,7 @@ export class BookingsService {
         if (session) {
           const totalPeople = booking.adults + booking.children;
           session.bookedCount = Math.max(0, session.bookedCount - totalPeople);
-          
           await queryRunner.manager.save(session);
-          
-          // Emit socket update for real-time capacity refresh
           this.eventsGateway.broadcastSessionUpdate(
             session.id,
             session.bookedCount,
@@ -279,9 +267,7 @@ export class BookingsService {
 
       await queryRunner.commitTransaction();
 
-      // Clear the user's booking cache list
       await this.cacheService.del(`bookings:user:${userId}`);
-
       this.logger.log(`Booking ${bookingId} was manually cancelled by user ${userId}`);
 
       return { message: 'Đã hủy booking thành công' };
@@ -310,23 +296,18 @@ export class BookingsService {
         throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
       }
 
-      // Update Booking status
       booking.status = BookingStatus.PAID;
       await queryRunner.manager.save(booking);
 
-      // Update associated Payment status
       await queryRunner.manager.update(Payment, { booking: { id: bookingId } }, {
         status: PaymentStatus.COMPLETED,
       });
 
-      // Clear related cache
       if (booking.user) {
         await this.cacheService.del(`bookings:user:${booking.user.id}`);
       }
 
       await queryRunner.commitTransaction();
-
-      // Find and remove the timeout job so it doesn't cancel the booking later
       const jobs = await this.bookingQueue.getDelayed();
       for (const job of jobs) {
         if (job.name === 'check-payment-timeout' && job.data.bookingId === bookingId) {
@@ -382,21 +363,17 @@ export class BookingsService {
         return; // Already handled or not found
       }
 
-      // 1. Update Booking status to CANCELED
       booking.status = BookingStatus.CANCELED;
       await queryRunner.manager.save(booking);
 
-      // 2. Update associated Payment status
       await queryRunner.manager.update(Payment, { booking: { id: bookingId } }, {
         status: PaymentStatus.FAILED,
       });
 
-      // 3. Clear user cache
       if (booking.user) {
         await this.cacheService.del(`bookings:user:${booking.user.id}`);
       }
 
-      // 4. Release capacity
       if (booking.session) {
         const session = await queryRunner.manager
           .createQueryBuilder(TourSession, 'session')
@@ -407,9 +384,7 @@ export class BookingsService {
         if (session) {
           const totalPeople = booking.adults + booking.children;
           session.bookedCount = Math.max(0, session.bookedCount - totalPeople);
-          
           await queryRunner.manager.save(session);
-          
           this.eventsGateway.broadcastSessionUpdate(
             session.id,
             session.bookedCount,

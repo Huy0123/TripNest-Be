@@ -16,8 +16,8 @@ import {
 import { LocationService } from './location.service';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
-import { LocationResponseDto } from './dto/location-response.dto';
-import { plainToClass } from 'class-transformer';
+import { Message } from '@/decorators/message.decorator';
+import { Public } from '@/decorators/public.decorator';
 
 @Controller('locations')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -26,26 +26,18 @@ export class LocationController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Public()
+  @Message('Location created successfully')
   async create(@Body(ValidationPipe) createLocationDto: CreateLocationDto) {
-    const location = await this.locationService.create(createLocationDto);
-    return {
-      message: 'Location created successfully',
-      data: plainToClass(LocationResponseDto, location, {
-        excludeExtraneousValues: true,
-      }),
-    };
+    return await this.locationService.create(createLocationDto);
   }
 
   @Get()
-  async findAll(
-    @Query('search') search?: string,
-    @Query('country') country?: string,
-  ) {
+  @Public()
+  async findAll(@Query('country') country?: string) {
     let locations;
 
-    if (search) {
-      locations = await this.locationService.search(search);
-    } else if (country) {
+    if (country) {
       locations = await this.locationService.findByCountry(country);
     } else {
       locations = await this.locationService.findAll();
@@ -53,27 +45,23 @@ export class LocationController {
 
     return {
       message: 'Locations retrieved successfully',
-      data: locations.map((location) =>
-        plainToClass(LocationResponseDto, location, {
-          excludeExtraneousValues: true,
-        }),
-      ),
+      data: locations,
       total: locations.length,
     };
   }
 
   @Get(':id')
+  @Public()
   async findOne(@Param('id') id: string) {
     const location = await this.locationService.findOne(id);
     return {
       message: 'Location retrieved successfully',
-      data: plainToClass(LocationResponseDto, location, {
-        excludeExtraneousValues: true,
-      }),
+      data: location,
     };
   }
 
   @Patch(':id')
+  @Public()
   async update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateLocationDto: UpdateLocationDto,
@@ -81,13 +69,12 @@ export class LocationController {
     const location = await this.locationService.update(id, updateLocationDto);
     return {
       message: 'Location updated successfully',
-      data: plainToClass(LocationResponseDto, location, {
-        excludeExtraneousValues: true,
-      }),
+      data: location,
     };
   }
 
   @Delete(':id')
+  @Public()
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.locationService.remove(id);

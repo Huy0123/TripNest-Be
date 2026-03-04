@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyForgotPasswordDto } from './dto/verify-forgot-password.dto';
 import { Public } from '@/decorators/public.decorator';
 import { Message } from '@/decorators/message.decorator';
 import { Response, Request } from 'express';
@@ -34,9 +36,11 @@ export class AuthController {
   }
 
   @Post('logout')
+  @UseGuards(RefreshJwt)
   @Message('Logout successful.')
-  logout(@Res({ passthrough: true }) res: Response) {
-    return this.authService.logout(res);
+  logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const userId = (req.user as any)?.id || (req.user as any)?.sub;
+    return this.authService.logout(userId, res);
   }
 
   @Post('google')
@@ -59,8 +63,34 @@ export class AuthController {
   @Post('resend-verification-email')
   @Public()
   @Message('Verification email resent successfully.')
-  resendVerificationEmail(@Body() body: { email: string }) {
-    return this.authService.resendVerificationEmail(body.email);
+  resendVerificationEmail(@Body('email') email: string) {
+    return this.authService.resendVerificationEmail(email);
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @Message('Forgot password OTP sent successfully.')
+  forgotPassword(@Body('email') email: string) {
+    return this.authService.forgotPassword(email);
+  }
+
+  @Post('verify-forgot-password')
+  @Public()
+  @Message('OTP verified successfully.')
+  verifyForgotPassword(@Body() verifyDto: VerifyForgotPasswordDto) {
+    return this.authService.verifyForgotPasswordOtp(verifyDto.email, verifyDto.otp);
+  }
+
+  @Post('reset-password')
+  @Public()
+  @Message('Password reset successfully.')
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(
+      resetPasswordDto.email,
+      resetPasswordDto.otp,
+      resetPasswordDto.newPassword,
+      resetPasswordDto.confirmNewPassword,
+    );
   }
 
   @Get('me')

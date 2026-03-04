@@ -64,7 +64,6 @@ export class PaymentsService {
     return vnpUrl + '?' + querystring.stringify(vnp_Params, { encode: false });
   }
 
-  // Helper to sort params alphabetically based on VNPay requirements
   sortObject(obj: any) {
     const sorted: Record<string, string> = {};
     const str: string[] = [];
@@ -96,7 +95,6 @@ export class PaymentsService {
     if (secureHash === signed) {
       const txnRef = query['vnp_TxnRef'];
       const responseCode = query['vnp_ResponseCode'];
-      // Update transaction status
       const transaction = await this.transactionRepository.findOne({ where: { transactionCode: txnRef } });
       if (transaction) {
          if (responseCode === '00') {
@@ -137,7 +135,6 @@ export class PaymentsService {
             return { RspCode: '01', Message: 'Order not found' };
         }
         
-        // check amount
         const amount = Number(query['vnp_Amount']) / 100;
         if (amount !== transaction.amount) {
              return { RspCode: '04', Message: 'Invalid amount' };
@@ -151,21 +148,14 @@ export class PaymentsService {
              transaction.status = 'PAID';
              transaction.responseCode = rspCode;
              transaction.payDate = query['vnp_PayDate'];
-             await this.transactionRepository.save(transaction);
-             
-             // Trigger Booking Success Logic
              await this.bookingsService.confirmPaymentSuccess(transaction.bookingId);
-             
              return { RspCode: '00', Message: 'Confirm Success' };
         } else {
              transaction.status = 'FAILED';
              transaction.responseCode = rspCode;
              await this.transactionRepository.save(transaction);
-             
-             // Cancel the booking and release seats
              await this.bookingsService.handlePaymentFailure(transaction.bookingId);
-             
-             return { RspCode: '00', Message: 'Confirm Success' }; // IPN expects 00 for handling ack even if payment failed
+             return { RspCode: '00', Message: 'Confirm Success' };
         }
     } else {
         return { RspCode: '97', Message: 'Invalid Checksum' };

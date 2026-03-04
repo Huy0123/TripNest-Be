@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { Location } from './entities/location.entity';
@@ -21,8 +21,22 @@ export class LocationService {
       const location = this.locationRepository.create(createLocationDto);
       return await this.locationRepository.save(location);
     } catch (error) {
+      if (error.code === '23505') {
+        throw new BadRequestException('location already exists');
+      }
       throw new BadRequestException(
         'Failed to create location: ' + error.message,
+      );
+    }
+  }
+
+  async update(id: string, updateLocationDto: UpdateLocationDto): Promise<Location> {
+    try {
+      await this.locationRepository.update(id, updateLocationDto);
+      return await this.findOne(id);
+    } catch (error) {
+      throw new BadRequestException(
+        'Failed to update location: ' + error.message,
       );
     }
   }
@@ -37,22 +51,18 @@ export class LocationService {
       throw new NotFoundException(`Location with ID ${id} not found`);
     }
     return location;
+  }  
+
+  async isDepartureLocationId(id: string) {
+    const location = await this.locationRepository.findOne({ where: { id } });
+    if (location) return location;
+    return null;
   }
 
-  async update(
-    id: string,
-    updateLocationDto: UpdateLocationDto,
-  ): Promise<Location> {
-    const location = await this.findOne(id);
-    Object.assign(location, updateLocationDto);
-
-    try {
-      return await this.locationRepository.save(location);
-    } catch (error) {
-      throw new BadRequestException(
-        'Failed to update location: ' + error.message,
-      );
-    }
+  async isDestinationLocationIds(ids: string[]) {
+    const location = await this.locationRepository.find({ where: { id: In(ids) } });
+    if (location) return location;
+    return null;
   }
 
   async remove(id: string): Promise<void> {
@@ -71,19 +81,5 @@ export class LocationService {
       where: { country },
       order: { city: 'ASC' },
     });
-  }
-
-  async search(keyword: string): Promise<Location[]> {
-    return await this.locationRepository
-      .createQueryBuilder('location')
-      .where(
-        'location.city ILIKE :keyword OR location.country ILIKE :keyword OR location.province ILIKE :keyword',
-        {
-          keyword: `%${keyword}%`,
-        },
-      )
-      .andWhere('location.isActive = :isActive', { isActive: true })
-      .orderBy('location.city', 'ASC')
-      .getMany();
   }
 }
