@@ -16,6 +16,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Public } from '@/decorators/public.decorator';
+import { Role } from '@/decorators/role.decorator';
+import { UserRole } from '@/enums/user-role.enum';
 import { ToursService } from './tours.service';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
@@ -28,6 +30,7 @@ export class ToursController {
   constructor(private readonly toursService: ToursService) {}
 
   @Post()
+  @Role(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   @Message('Tour created successfully')
   async create(@Body(ValidationPipe) createTourDto: CreateTourDto) {
@@ -56,6 +59,7 @@ export class ToursController {
   }
 
   @Patch(':id')
+  @Role(UserRole.ADMIN)
   @Message('Tour updated successfully')
   async update(
     @Param('id') id: string,
@@ -65,12 +69,14 @@ export class ToursController {
   }
 
   @Delete(':id')
+  @Role(UserRole.ADMIN)
   @Message('Tour deleted successfully')
   async remove(@Param('id') id: string) {
     return await this.toursService.remove(id);
   }
 
   @Patch(':id/image')
+  @Role(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   @Message('Tour image uploaded successfully')
   async uploadImage(

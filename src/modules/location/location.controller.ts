@@ -16,8 +16,11 @@ import {
 import { LocationService } from './location.service';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import { LocationQueryDto } from './dto/location-query.dto';
 import { Message } from '@/decorators/message.decorator';
 import { Public } from '@/decorators/public.decorator';
+import { Role } from '@/decorators/role.decorator';
+import { UserRole } from '@/enums/user-role.enum';
 
 @Controller('locations')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -25,8 +28,8 @@ export class LocationController {
   constructor(private readonly locationService: LocationService) {}
 
   @Post()
+  @Role(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  @Public()
   @Message('Location created successfully')
   async create(@Body(ValidationPipe) createLocationDto: CreateLocationDto) {
     return await this.locationService.create(createLocationDto);
@@ -34,20 +37,9 @@ export class LocationController {
 
   @Get()
   @Public()
-  async findAll(@Query('country') country?: string) {
-    let locations;
-
-    if (country) {
-      locations = await this.locationService.findByCountry(country);
-    } else {
-      locations = await this.locationService.findAll();
-    }
-
-    return {
-      message: 'Locations retrieved successfully',
-      data: locations,
-      total: locations.length,
-    };
+  @Message('Locations retrieved successfully')
+  async findAll(@Query() query: LocationQueryDto) {
+    return await this.locationService.findAll(query);
   }
 
   @Get(':id')
@@ -61,7 +53,7 @@ export class LocationController {
   }
 
   @Patch(':id')
-  @Public()
+  @Role(UserRole.ADMIN)
   async update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateLocationDto: UpdateLocationDto,
@@ -74,7 +66,7 @@ export class LocationController {
   }
 
   @Delete(':id')
-  @Public()
+  @Role(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.locationService.remove(id);

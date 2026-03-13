@@ -59,5 +59,5 @@ export class CreateTourDto {
 
   @ValidateNested()
   @Type(() => CreateTourDetailDto)
-  detail: CreateTourDetailDto;
+  detail?: CreateTourDetailDto;
 }

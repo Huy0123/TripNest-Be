@@ -12,6 +12,9 @@ import {
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { Public } from '@/decorators/public.decorator';
+import { Role } from '@/decorators/role.decorator';
+import { UserRole } from '@/enums/user-role.enum';
 
 @Controller('reviews')
 export class ReviewsController {
@@ -19,6 +22,7 @@ export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
+  @Role(UserRole.USER)
   async create(@Body() createReviewDto: CreateReviewDto) {
     try {
       this.logger.log('Creating a new review');
@@ -35,21 +39,25 @@ export class ReviewsController {
   }
 
   @Get()
+  @Public()
   findAll(@Query('tourId') tourId: string) {
     return this.reviewsService.findAll(tourId);
   }
 
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string) {
     return this.reviewsService.findOne(id);
   }
 
   @Patch(':id')
+  @Role(UserRole.USER)
   update(@Param('id') id: string, @Body() updateReviewDto: UpdateReviewDto) {
     return this.reviewsService.update(id, updateReviewDto);
   }
 
   @Delete(':id')
+  @Role(UserRole.ADMIN, UserRole.USER)
   remove(@Param('id') id: string) {
     return this.reviewsService.remove(id);
   }

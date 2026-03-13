@@ -41,6 +41,9 @@ export class Tour {
   @Column({nullable: true})
   imagePublicId: string;
 
+  @Column({nullable: true, default: 'image'})
+  imageType: string;
+
   @Index()
   @Column({ default: 0 })
   price: number;

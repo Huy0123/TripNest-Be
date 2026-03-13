@@ -21,6 +21,10 @@ export class ToursQueryDto {
 
   @IsOptional()
   @IsString()
+  destinationSearch?: string;
+
+  @IsOptional()
+  @IsString()
   departureLocationId?: string;
 
   @IsOptional()

@@ -13,6 +13,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { BookingStatus } from '@/enums/booking-status.enum';
 
@@ -26,9 +27,18 @@ export class Booking {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
-  @Generated('uuid')
+  @Column({ unique: true, type: 'varchar', length: 20 })
   bookingCode: string;
+
+  @BeforeInsert()
+  generateBookingCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    this.bookingCode = `TN-${result}`;
+  }
 
   @ManyToOne(() => User, (user) => user.bookings, { onDelete: 'CASCADE' })
   user: User;

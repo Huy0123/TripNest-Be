@@ -13,7 +13,10 @@ export class UploadService {
   ): Promise<UploadResult> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: folder },
+        { 
+          folder: folder,
+          resource_type: 'auto',
+        },
         (error, result) => {
           if (error) return reject(error);
           resolve(result as UploadResult);
@@ -23,12 +26,16 @@ export class UploadService {
     });
   }
 
-  async deleteImage(publicId: string) {
+  async deleteImage(publicId: string, resourceType: 'image' | 'video' | 'raw' = 'image') {
     return new Promise((resolve, reject) => {
-      cloudinary.uploader.destroy(publicId, (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      });
+      cloudinary.uploader.destroy(
+        publicId, 
+        { resource_type: resourceType },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        },
+      );
     });
   }
 }

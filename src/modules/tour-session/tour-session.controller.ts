@@ -18,6 +18,10 @@ import { CreateTourSessionDto } from './dto/create-tour-session.dto';
 import { UpdateTourSessionDto } from './dto/update-tour-session.dto';
 import { TourSessionResponseDto } from './dto/tour-session-response.dto';
 import { plainToClass } from 'class-transformer';
+import { Public } from '@/decorators/public.decorator';
+import { Role } from '@/decorators/role.decorator';
+import { UserRole } from '@/enums/user-role.enum';
+import { Message } from '@/decorators/message.decorator';
 
 @Controller('tour-sessions')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -25,6 +29,7 @@ export class TourSessionController {
   constructor(private readonly tourSessionService: TourSessionService) {}
 
   @Post()
+  @Role(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body(ValidationPipe) createTourSessionDto: CreateTourSessionDto,
@@ -40,6 +45,7 @@ export class TourSessionController {
   }
 
   @Get()
+  @Public()
   async findAll(
     @Query('available') available?: string,
     @Query('upcoming') upcoming?: string,
@@ -67,6 +73,7 @@ export class TourSessionController {
   }
 
   @Get('tour/:tourId')
+  @Public()
   async findByTour(@Param('tourId') tourId: string) {
     const sessions = await this.tourSessionService.findByTour(tourId);
     return {
@@ -81,6 +88,7 @@ export class TourSessionController {
   }
 
   @Get(':id')
+  @Public()
   async findOne(@Param('id') id: string) {
     const tourSession = await this.tourSessionService.findOne(id);
     return {
@@ -92,6 +100,8 @@ export class TourSessionController {
   }
 
   @Patch(':id')
+  @Role(UserRole.ADMIN)
+  @Message('Tour session updated successfully')
   async update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateTourSessionDto: UpdateTourSessionDto,
@@ -101,7 +111,6 @@ export class TourSessionController {
       updateTourSessionDto,
     );
     return {
-      message: 'Tour session updated successfully',
       data: plainToClass(TourSessionResponseDto, tourSession, {
         excludeExtraneousValues: true,
       }),
@@ -109,6 +118,7 @@ export class TourSessionController {
   }
 
   @Delete(':id')
+  @Role(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.tourSessionService.remove(id);

@@ -201,24 +201,6 @@ export class BookingsService {
     return booking;
   }
 
-  async refundBooking(bookingId: string) {
-      const booking = await this.bookingsRepository.findOne({ where: { id: bookingId } });
-      if (!booking) {
-          throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
-      }
-      
-      if (booking.status !== BookingStatus.PAID) {
-          throw new HttpException('Booking is not eligible for refund', HttpStatus.BAD_REQUEST);
-      }
-
-      await this.bookingQueue.add('refund', { 
-          bookingId: booking.id, 
-          amount: booking.totalAmount, 
-          reason: 'User requested' 
-      });
-      return { message: 'Refund request accepted' };
-  }
-
   async cancelBooking(bookingId: string, userId: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();

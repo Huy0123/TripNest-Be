@@ -27,9 +27,11 @@ export class TourDetailsService {
       relations: ['tour'],
     });
     if (!tourDetail) {
-      throw new NotFoundException(
-        `TourDetail with ID ${tourDetailId} not found`,
-      );
+      throw new NotFoundException(`TourDetail with ID ${tourDetailId} not found`);
+    }
+
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No image files uploaded');
     }
 
     try {
@@ -37,19 +39,17 @@ export class TourDetailsService {
 
       const uploaded = await Promise.all(
         files.map((file) =>
-          this.uploadService
-            .uploadImage(file, 'tour_details')
-            .then((result) => ({
-              url: result.secure_url,
-              publicId: result.public_id,
-            })),
+          this.uploadService.uploadImage(file, 'tour_details').then((result) => ({
+            url: result.secure_url,
+            publicId: result.public_id,
+            type: result.resource_type as 'image' | 'video',
+          })),
         ),
       );
 
       tourDetail.images = [...currentImages, ...uploaded];
       await this.tourDetailRepository.save(tourDetail);
 
-      // Xóa cache của tour để GET trả về dữ liệu mới
       if (tourDetail.tour?.id) {
         await this.cacheService.del(`tours:${tourDetail.tour.id}`);
         await this.cacheService.incrementCacheVersion('tours');
@@ -60,9 +60,50 @@ export class TourDetailsService {
         images: tourDetail.images,
       };
     } catch (error) {
-      throw new BadRequestException(
-        'Failed to upload images: ' + error.message,
-      );
+      throw new BadRequestException('Failed to upload images: ' + error.message);
+    }
+  }
+
+  async uploadVideo(
+    tourDetailId: string,
+    file: Express.Multer.File,
+  ): Promise<{ message: string; images: ITourImage[] }> {
+    const tourDetail = await this.tourDetailRepository.findOne({
+      where: { id: tourDetailId },
+      relations: ['tour'],
+    });
+    if (!tourDetail) {
+      throw new NotFoundException(`TourDetail with ID ${tourDetailId} not found`);
+    }
+
+    if (!file) {
+      throw new BadRequestException('No video file uploaded');
+    }
+
+    try {
+      const currentImages: ITourImage[] = tourDetail.images || [];
+
+      const result = await this.uploadService.uploadImage(file, 'tour_details');
+      const uploadedVideo = {
+        url: result.secure_url,
+        publicId: result.public_id,
+        type: result.resource_type as 'image' | 'video',
+      };
+
+      tourDetail.images = [...currentImages, uploadedVideo];
+      await this.tourDetailRepository.save(tourDetail);
+
+      if (tourDetail.tour?.id) {
+        await this.cacheService.del(`tours:${tourDetail.tour.id}`);
+        await this.cacheService.incrementCacheVersion('tours');
+      }
+
+      return {
+        message: 'Video uploaded successfully',
+        images: tourDetail.images,
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to upload video: ' + error.message);
     }
   }
 
@@ -90,7 +131,7 @@ export class TourDetailsService {
     }
 
     try {
-      await this.uploadService.deleteImage(publicId);
+      await this.uploadService.deleteImage(publicId, imageToDelete.type || 'image');
     } catch (err) {
       // Không block nếu xóa Cloudinary thất bại
     }

@@ -25,13 +25,29 @@ export class TransformInterceptor<T>
       return next.handle();
     }
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        data,
-        statusCode: context.switchToHttp().getResponse().statusCode,
-        message:
-          this.reflector.get<string>('message', context.getHandler()) || null,
-      })),
+      map((res) => {
+        const statusCode = context.switchToHttp().getResponse().statusCode;
+        const message =
+          this.reflector.get<string>('message', context.getHandler()) || null;
+
+        // Nếu res đã có trường data (thường là kết quả phân trang), ta spread nó ra
+        if (res && typeof res === 'object' && 'data' in res) {
+          return {
+            success: true,
+            statusCode,
+            message,
+            ...res,
+          };
+        }
+
+        // Ngược lại, ta bọc kết quả vào trường data
+        return {
+          success: true,
+          statusCode,
+          message,
+          data: res,
+        };
+      }),
     );
   }
 }

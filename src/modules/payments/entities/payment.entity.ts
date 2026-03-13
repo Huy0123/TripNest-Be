@@ -6,14 +6,10 @@ export enum PaymentStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
 }
 
 export enum PaymentProvider {
-  STRIPE = 'STRIPE',
   VNPAY = 'VNPAY',
-  PAYPAL = 'PAYPAL',
-  CASH = 'CASH',
 }
 
 @Entity('payments')
@@ -34,7 +30,7 @@ export class Payment extends AbstractEntity {
   @Column({
     type: 'enum',
     enum: PaymentProvider,
-    default: PaymentProvider.CASH,
+    default: PaymentProvider.VNPAY,
   })
   provider: PaymentProvider;
 

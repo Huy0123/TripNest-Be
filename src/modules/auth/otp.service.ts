@@ -12,7 +12,7 @@ type OtpResult = {
 
 @Injectable()
 export class OtpService {
-  private readonly TTL_OTP = 600_000;
+  private readonly TTL_OTP = 60_000;
   
   constructor(
     private readonly cacheService: CacheService,
