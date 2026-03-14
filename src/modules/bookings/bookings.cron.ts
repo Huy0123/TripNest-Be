@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Booking } from './entities/booking.entity';
 import { MailService } from '../mail/mail.service';
 import { BookingStatus } from '@/enums/booking-status.enum';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class BookingsCronService {

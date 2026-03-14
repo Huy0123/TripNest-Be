@@ -3,7 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
-  IsDecimal,
+  IsNumber,
   IsDateString,
   IsEnum,
   Min,
@@ -24,13 +24,16 @@ export class CreateTourSessionDto {
   @Type(() => Number)
   capacity: number;
 
-  @IsDecimal({ decimal_digits: '2' })
+  @IsNumber()
+  @Min(0)
   @Type(() => Number)
   adultPrice: number;
 
-  @IsDecimal({ decimal_digits: '2' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   @Type(() => Number)
-  childrenPrice: number;
+  childrenPrice?: number;
 
   @IsOptional()
   @IsEnum(DepartureStatus)

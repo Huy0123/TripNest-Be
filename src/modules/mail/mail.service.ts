@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { VerifyAccountInterface } from './interfaces/verify-account.interface';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class MailService {

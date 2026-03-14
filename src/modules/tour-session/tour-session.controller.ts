@@ -16,6 +16,7 @@ import {
 import { TourSessionService } from './tour-session.service';
 import { CreateTourSessionDto } from './dto/create-tour-session.dto';
 import { UpdateTourSessionDto } from './dto/update-tour-session.dto';
+import { BulkCreateTourSessionDto } from './dto/bulk-create-tour-session.dto';
 import { TourSessionResponseDto } from './dto/tour-session-response.dto';
 import { plainToClass } from 'class-transformer';
 import { Public } from '@/decorators/public.decorator';
@@ -30,17 +31,23 @@ export class TourSessionController {
 
   @Post()
   @Role(UserRole.ADMIN)
-  @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body(ValidationPipe) createTourSessionDto: CreateTourSessionDto,
-  ) {
-    const tourSession =
-      await this.tourSessionService.create(createTourSessionDto);
+  @Message('Tour session created successfully')
+  async create(@Body(ValidationPipe) createDto: CreateTourSessionDto) {
+    return await this.tourSessionService.create(createDto);
+  }
+
+  @Post('bulk')
+  @Role(UserRole.ADMIN)
+  @Message('Tour sessions bulk created successfully')
+  async bulkCreate(@Body(ValidationPipe) bulkCreateDto: BulkCreateTourSessionDto) {
+    const result = await this.tourSessionService.bulkCreate(bulkCreateDto);
     return {
-      message: 'Tour session created successfully',
-      data: plainToClass(TourSessionResponseDto, tourSession, {
-        excludeExtraneousValues: true,
-      }),
+      message: `${result.count} tour sessions bulk created successfully`,
+      data: result.sessions.map((session) =>
+        plainToClass(TourSessionResponseDto, session, {
+          excludeExtraneousValues: true,
+        }),
+      ),
     };
   }
 

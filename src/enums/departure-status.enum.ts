@@ -2,5 +2,7 @@ export enum DepartureStatus {
   OPEN = 'OPEN',
   CLOSED = 'CLOSED',
   SOLDOUT = 'SOLDOUT',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
 }

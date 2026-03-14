@@ -13,7 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from '../auth/dto/register.dto';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 import { CreateUserAdminDto } from './dto/create-user-admin.dto';
 import { NAME_QUEUE } from 'src/enums/name-queue.enum';
 import { UserRole } from 'src/enums/user-role.enum';

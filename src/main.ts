@@ -4,7 +4,7 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { TransformInterceptor } from './interceptor/transform.interceptor';
 
 async function bootstrap() {
