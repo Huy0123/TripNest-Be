@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 import { CreateTourSessionDto } from './dto/create-tour-session.dto';
 import { UpdateTourSessionDto } from './dto/update-tour-session.dto';
+import { BulkCreateTourSessionDto } from './dto/bulk-create-tour-session.dto';
 import { TourSession } from './entities/tour-session.entity';
 import { Tour } from '../tours/entities/tour.entity';
 import { DepartureStatus } from 'src/enums/departure-status.enum';
@@ -55,6 +56,76 @@ export class TourSessionService {
       );
     }
   }
+
+  async bulkCreate(
+    dto: BulkCreateTourSessionDto,
+  ): Promise<{ count: number; sessions: TourSession[] }> {
+    const tour = await this.tourRepository.findOne({
+      where: { id: dto.tourId },
+    });
+    if (!tour) {
+      throw new NotFoundException(`Tour with ID ${dto.tourId} not found`);
+    }
+
+    const start = dayjs(dto.startDateRange).startOf('day');
+    const end = dayjs(dto.endDateRange).endOf('day');
+
+    if (start.isAfter(end)) {
+      throw new BadRequestException('Start date range must be before end date range');
+    }
+
+    const sessionsToCreate: TourSession[] = [];
+    let current = start;
+
+    // Lấy các session hiện có để tránh trùng
+    const existingSessions = await this.tourSessionRepository.find({
+      where: {
+        tour: { id: dto.tourId },
+        startDate: MoreThanOrEqual(start.toDate()),
+      },
+      select: ['startDate'],
+    });
+
+    const existingDates = existingSessions.map((s) =>
+      dayjs(s.startDate).startOf('day').toISOString(),
+    );
+
+    while (current.isBefore(end) || current.isSame(end, 'day')) {
+      // 0: Sun, 1: Mon, ...
+      if (dto.daysOfWeek.includes(current.day())) {
+        const dateStr = current.startOf('day').toISOString();
+        
+        if (!existingDates.includes(dateStr)) {
+          const session = this.tourSessionRepository.create({
+            tour,
+            startDate: current.toDate(),
+            capacity: dto.capacity,
+            adultPrice: dto.adultPrice,
+            childrenPrice: dto.childrenPrice || 0,
+            discount: dto.discount || 0,
+            status: DepartureStatus.OPEN,
+          });
+          sessionsToCreate.push(session);
+        }
+      }
+      current = current.add(1, 'day');
+    }
+
+    if (sessionsToCreate.length === 0) {
+      return { count: 0, sessions: [] };
+    }
+
+    try {
+      const savedSessions = await this.tourSessionRepository.save(sessionsToCreate);
+      return {
+        count: savedSessions.length,
+        sessions: savedSessions,
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to bulk create sessions: ' + error.message);
+    }
+  }
+
 
   async findAll(): Promise<TourSession[]> {
     return await this.tourSessionRepository.find({

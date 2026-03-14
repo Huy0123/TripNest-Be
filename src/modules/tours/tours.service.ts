@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, Brackets } from 'typeorm';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
 import { Tour } from './entities/tour.entity';
@@ -48,13 +48,20 @@ export class ToursService {
     }
 
     const tour = this.tourRepository.create(createTourDto);
-    const tourDetail = this.tourDetailRepository.create(createTourDto.detail);
     tour.departureLocation = departureLocation;
     tour.destinations = destinations;
-    tour.detail = tourDetail;
 
     try {
       const savedTour = await this.tourRepository.save(tour);
+
+      if (createTourDto.detail) {
+        const tourDetail = this.tourDetailRepository.create({
+          ...createTourDto.detail,
+          id: savedTour.id,
+        });
+        savedTour.detail = await this.tourDetailRepository.save(tourDetail);
+      }
+
       await this.cacheService.incrementCacheVersion('tours');
       return savedTour;
     } catch (error) {
@@ -98,6 +105,14 @@ export class ToursService {
       }
       const updatedTour = this.tourRepository.merge(result, updateTourDto);
 
+      if (updateTourDto.detail) {
+        const tourDetail = this.tourDetailRepository.create({
+          ...updateTourDto.detail,
+          id: result.id,
+        });
+        updatedTour.detail = await this.tourDetailRepository.save(tourDetail);
+      }
+
       await this.cacheService.incrementCacheVersion('tours');
       await this.cacheService.del(`tours:${id}`);
       return await this.tourRepository.save(updatedTour);
@@ -126,6 +141,7 @@ export class ToursService {
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       isPopular,
+      destinationSearch,
     } = query;
 
     const queryHash = Buffer.from(JSON.stringify(query)).toString('base64');
@@ -177,6 +193,18 @@ export class ToursService {
       queryBuilder.andWhere(
         'destinations.id = :destinationId OR departureLocation.id = :destinationId',
         { destinationId },
+      );
+    }
+
+    if (destinationSearch) {
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('destinations.city ILIKE :destSearch', {
+            destSearch: `%${destinationSearch}%`,
+          }).orWhere('destinations.country ILIKE :destSearch', {
+            destSearch: `%${destinationSearch}%`,
+          });
+        }),
       );
     }
 
@@ -271,10 +299,14 @@ export class ToursService {
       throw new NotFoundException(`Tour with ID ${id} not found`);
     }
 
+    if (!file) {
+      throw new BadRequestException('No image file uploaded');
+    }
+
     try {
       if (tour.imagePublicId) {
         try {
-          await this.uploadService.deleteImage(tour.imagePublicId);
+          await this.uploadService.deleteImage(tour.imagePublicId, (tour.imageType as any) || 'image');
         } catch {
         }
       }
@@ -282,13 +314,14 @@ export class ToursService {
       const uploadedImage = await this.uploadService.uploadImage(file, 'tours');
       tour.image = uploadedImage.secure_url;
       tour.imagePublicId = uploadedImage.public_id;
+      tour.imageType = uploadedImage.resource_type as 'image' | 'video';
 
       await this.tourRepository.save(tour);
       await this.cacheService.incrementCacheVersion('tours');
       await this.cacheService.del(`tours:${id}`);
 
       return {
-        message: 'Tour image uploaded successfully',
+        message: `${tour.imageType === 'video' ? 'Video' : 'Image'} uploaded successfully`,
         image: tour.image,
       };
     } catch (error) {

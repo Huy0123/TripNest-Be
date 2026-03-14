@@ -5,13 +5,16 @@ import {
   Logger,
   Inject,
   forwardRef,
+  OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from '../auth/dto/register.dto';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
+import { CreateUserAdminDto } from './dto/create-user-admin.dto';
 import { NAME_QUEUE } from 'src/enums/name-queue.enum';
 import { UserRole } from 'src/enums/user-role.enum';
 import { AuthProvider } from 'src/enums/auth.enum';
@@ -19,17 +22,52 @@ import { OtpService } from '../auth/otp.service';
 import { GoogleDto } from '../auth/dto/google.dto';
 import { UploadService } from '../upload/upload.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserQueryDto } from './dto/user-query.dto';
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   private readonly logger = new Logger(UsersService.name);
-  private readonly timeResendEmail = 600;
+  private readonly timeResendEmail = 60;
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @Inject(forwardRef(() => OtpService))
     private readonly otpService: OtpService,
     private readonly uploadService: UploadService,
+    private readonly configService: ConfigService,
   ) {}
+
+  async onModuleInit() {
+    await this.seedAdmin();
+  }
+
+  private async seedAdmin() {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD');
+
+    if (!adminEmail || !adminPassword) {
+      this.logger.warn('Admin credentials not found in environment variables. Skipping seeding.');
+      return;
+    }
+
+    const admin = await this.userRepository.findOne({
+      where: { email: adminEmail },
+    });
+
+    if (!admin) {
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      const newAdmin = this.userRepository.create({
+        email: adminEmail,
+        password: hashedPassword,
+        firstName: 'System',
+        lastName: 'Admin',
+        role: UserRole.ADMIN,
+        isActive: true,
+        providers: [AuthProvider.LOCAL],
+      });
+      await this.userRepository.save(newAdmin);
+      this.logger.log(`Initial admin account created: ${adminEmail}`);
+    }
+  }
 
   async findByEmail(email: string, withPassword = false): Promise<any> {
     const query = this.userRepository.createQueryBuilder('user')
@@ -101,6 +139,29 @@ export class UsersService {
     return { id: newUser.id };
   }
 
+  async createByAdmin(createUserAdminDto: CreateUserAdminDto) {
+    const { email, password, firstName, lastName, role, isActive } = createUserAdminDto;
+    
+    const existingUser = await this.userRepository.findOne({ where: { email } });
+    if (existingUser) {
+      throw new HttpException('User already exists', HttpStatus.CONFLICT);
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = this.userRepository.create({
+      email,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      role: role || UserRole.USER,
+      isActive: isActive !== undefined ? isActive : true,
+      providers: [AuthProvider.LOCAL],
+    });
+
+    await this.userRepository.save(newUser);
+    return { id: newUser.id, message: 'User created successfully by admin' };
+  }
+
   // Gửi OTP xác thực
   async sendVerificationAccount(email: string) {
     this.logger.log(`Starting verification email to ${email}`);
@@ -114,8 +175,11 @@ export class UsersService {
       this.logger.warn(
         `Attempt to resend verification email to ${email} too soon`,
       );
+      const remainingTime = Math.ceil(
+        this.timeResendEmail - (currentTime - Number(cachedData.time)) / 1000,
+      );
       throw new HttpException(
-        `Please wait before requesting another verification email: ${(currentTime - Number(cachedData.time)) / 1000}s`,
+        `Please wait before requesting another verification email: ${remainingTime}s`,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -136,10 +200,6 @@ export class UsersService {
       currentTime,
     );
     this.logger.log(`Verification email sent to ${email}`);
-    return {
-      success: true,
-      message: `Verification email sent successfully to ${email}`,
-    };
   }
 
   async verifyAccount(email: string, otp: string) {
@@ -222,11 +282,17 @@ export class UsersService {
     return newUser;
   }
 
-  async findAll() {
-    this.logger.log('Fetching all users');
-    return this.userRepository.find({
+  async findAll(queryDto: UserQueryDto): Promise<{ data: User[]; total: number; page: number; limit: number }> {
+    const { page = 1, limit = 10 } = queryDto;
+    this.logger.log('Fetching all users with pagination');
+    
+    const [data, total] = await this.userRepository.findAndCount({
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return { data, total, page, limit };
   }
 
   async findOne(id: string) {

@@ -169,7 +169,7 @@ export class EmailProcessor extends WorkerHost {
   }
 
   private async handlePaymentSuccessEmail(job: Job): Promise<any> {
-    const { email, bookingCode, tourName, amount, paymentDate } = job.data;
+    const { email, bookingCode, tourName, amount, paymentDate, customerName } = job.data;
     this.logger.debug(
       `Sending payment success email to ${email} for booking ${bookingCode}`,
     );
@@ -180,6 +180,7 @@ export class EmailProcessor extends WorkerHost {
         tourName,
         amount,
         paymentDate,
+        customerName,
       });
       this.logger.log(`Payment success email sent successfully to ${email}`);
       return {
@@ -260,7 +261,7 @@ export class EmailProcessor extends WorkerHost {
   }
 
   private async handleTripReminder(job: Job): Promise<any> {
-    const { email, bookingCode, tourName, departureDate, daysUntilTrip } =
+    const { email, bookingCode, tourName, departureDate, daysUntilTrip, customerName } =
       job.data;
     this.logger.debug(
       `Sending trip reminder to ${email} for booking ${bookingCode}`,
@@ -272,6 +273,7 @@ export class EmailProcessor extends WorkerHost {
         tourName,
         departureDate,
         daysUntilTrip,
+        customerName,
       });
 
       this.logger.log(

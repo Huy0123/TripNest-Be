@@ -7,6 +7,7 @@ import { LocalStrategy } from '../../strategy/local.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from '../../strategy/jwt.strategy';
+import { RefreshTokenStrategy } from '../../strategy/refresh-jwt.strategy';
 import { OtpService } from './otp.service';
 import { BullModule } from '@nestjs/bullmq';
 import { NAME_REGISTER } from '@/enums/name-register.enum';
@@ -31,7 +32,7 @@ import { CacheModule } from '../cache/cache.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, OtpService, LocalStrategy, JwtStrategy],
+  providers: [AuthService, OtpService, LocalStrategy, JwtStrategy, RefreshTokenStrategy],
   exports: [AuthService, OtpService],
 })
 export class AuthModule {}

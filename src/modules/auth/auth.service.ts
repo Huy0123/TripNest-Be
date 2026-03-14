@@ -57,14 +57,14 @@ export class AuthService {
 
   async logout(userId: string, res: Response) {
     await this.usersService.updateHashedRefreshToken(userId, null);
-    res.clearCookie('refreshToken', {
+    const cookieOptions = {
       httpOnly: true,
-      secure: true,
-    });
-    return {
-      success: true,
-      message: 'Logout successful',
+      secure: false,
+      sameSite: 'lax' as const,
+      path: '/',
     };
+    res.clearCookie('refreshToken', cookieOptions);
+    res.clearCookie('accessToken', cookieOptions);
   }
 
   async googleLogin(idToken: string, res: Response) {
@@ -131,14 +131,15 @@ export class AuthService {
     return await this.usersService.findUserById(id);
   }
 
-  handleRefreshToken(user: any) {
+  handleRefreshToken(user: any, res: Response) {
     try {
       const payload = {
         email: user.email,
-        sub: user.id,
+        id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         avatar: user.avatar,
+        phoneNumber: user.phoneNumber,
         role: user.role,
       };
 
@@ -146,14 +147,22 @@ export class AuthService {
         expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '15m',
       });
 
+      const cookieOptions: any = {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/',
+      };
+
+      res.cookie('accessToken', accessToken, cookieOptions);
+
       return {
         success: true,
         message: 'Token refreshed successfully',
         user: {
           ...payload,
           providers: user.providers,
-        },
-        accessToken,
+        }
       };
     } catch (error) {
       this.logger.error('Error refreshing token', error.stack);
@@ -174,19 +183,23 @@ export class AuthService {
   private async createTokensAndResponse(user: any, res: Response, rememberMe: boolean = false) {
     const payload = {
       email: user.email,
-      sub: user.id,
+      id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       avatar: user.avatar,
-      role: user.role,
+      phoneNumber: user.phoneNumber,
+      role: user.role
     };
 
     if (!user.isActive) {
       await this.usersService.sendVerificationAccount(user.email);
-      return {
-        success: false,
-        message: 'User account is not active. Verification email sent.',
-      };
+      throw new HttpException(
+        {
+          message: 'Account is not active',
+          email: user.email,
+        },
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     const refreshToken = this.genRefreshToken(payload);
@@ -202,7 +215,9 @@ export class AuthService {
 
     const cookieOptions: any = {
       httpOnly: true,
-      secure: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
     };
 
     if (maxAge) {
@@ -215,14 +230,13 @@ export class AuthService {
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
     });
 
+    res.cookie('accessToken', accessToken, cookieOptions);
+
     return {
-      success: true,
-      message: 'Login successful',
       user: {
         ...payload,
         providers: user.providers,
-      },
-      accessToken,
+      }
     };
   }
 }

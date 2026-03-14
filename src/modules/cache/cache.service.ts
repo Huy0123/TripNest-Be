@@ -22,7 +22,11 @@ export class CacheService {
   async get<T>(key: string): Promise<T | undefined> {
     const data = await this.redisClient.get(key);
     if (!data) return undefined;
-    return data as T;
+    try {
+      return JSON.parse(data) as T;
+    } catch (e) {
+      return data as unknown as T;
+    }
   }
 
   async getCacheVersion(namespace: string): Promise<number> {

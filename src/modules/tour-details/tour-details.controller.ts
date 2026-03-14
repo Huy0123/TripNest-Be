@@ -1,23 +1,25 @@
 import {
   Controller,
-  Post,
   Delete,
   Param,
   UploadedFiles,
+  UploadedFile,
   UseInterceptors,
   Body,
+  Patch,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { TourDetailsService } from './tour-details.service';
-import { Public } from '@/decorators/public.decorator';
+import { Role } from '@/decorators/role.decorator';
+import { UserRole } from '@/enums/user-role.enum';
 import { Message } from '@/decorators/message.decorator';
 
 @Controller('tour-details')
+@Role(UserRole.ADMIN, UserRole.USER)
 export class TourDetailsController {
   constructor(private readonly tourDetailsService: TourDetailsService) {}
 
-  @Post(':id/images')
-  @Public()
+  @Patch(':id/images')
   @UseInterceptors(FilesInterceptor('files', 10))
   @Message('Images uploaded successfully')
   async uploadImages(
@@ -27,8 +29,18 @@ export class TourDetailsController {
     return await this.tourDetailsService.uploadImages(id, files);
   }
 
+  @Patch(':id/videos')
+  @UseInterceptors(FileInterceptor('file'))
+  @Message('Video uploaded successfully')
+  async uploadVideo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    console.log(file);
+    return await this.tourDetailsService.uploadVideo(id, file);
+  }
+
   @Delete(':id/images')
-  @Public()
   @Message('Image deleted successfully')
   async deleteImage(
     @Param('id') id: string,

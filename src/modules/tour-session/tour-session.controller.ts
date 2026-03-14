@@ -16,8 +16,13 @@ import {
 import { TourSessionService } from './tour-session.service';
 import { CreateTourSessionDto } from './dto/create-tour-session.dto';
 import { UpdateTourSessionDto } from './dto/update-tour-session.dto';
+import { BulkCreateTourSessionDto } from './dto/bulk-create-tour-session.dto';
 import { TourSessionResponseDto } from './dto/tour-session-response.dto';
 import { plainToClass } from 'class-transformer';
+import { Public } from '@/decorators/public.decorator';
+import { Role } from '@/decorators/role.decorator';
+import { UserRole } from '@/enums/user-role.enum';
+import { Message } from '@/decorators/message.decorator';
 
 @Controller('tour-sessions')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -25,21 +30,29 @@ export class TourSessionController {
   constructor(private readonly tourSessionService: TourSessionService) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body(ValidationPipe) createTourSessionDto: CreateTourSessionDto,
-  ) {
-    const tourSession =
-      await this.tourSessionService.create(createTourSessionDto);
+  @Role(UserRole.ADMIN)
+  @Message('Tour session created successfully')
+  async create(@Body(ValidationPipe) createDto: CreateTourSessionDto) {
+    return await this.tourSessionService.create(createDto);
+  }
+
+  @Post('bulk')
+  @Role(UserRole.ADMIN)
+  @Message('Tour sessions bulk created successfully')
+  async bulkCreate(@Body(ValidationPipe) bulkCreateDto: BulkCreateTourSessionDto) {
+    const result = await this.tourSessionService.bulkCreate(bulkCreateDto);
     return {
-      message: 'Tour session created successfully',
-      data: plainToClass(TourSessionResponseDto, tourSession, {
-        excludeExtraneousValues: true,
-      }),
+      message: `${result.count} tour sessions bulk created successfully`,
+      data: result.sessions.map((session) =>
+        plainToClass(TourSessionResponseDto, session, {
+          excludeExtraneousValues: true,
+        }),
+      ),
     };
   }
 
   @Get()
+  @Public()
   async findAll(
     @Query('available') available?: string,
     @Query('upcoming') upcoming?: string,
@@ -67,6 +80,7 @@ export class TourSessionController {
   }
 
   @Get('tour/:tourId')
+  @Public()
   async findByTour(@Param('tourId') tourId: string) {
     const sessions = await this.tourSessionService.findByTour(tourId);
     return {
@@ -81,6 +95,7 @@ export class TourSessionController {
   }
 
   @Get(':id')
+  @Public()
   async findOne(@Param('id') id: string) {
     const tourSession = await this.tourSessionService.findOne(id);
     return {
@@ -92,6 +107,8 @@ export class TourSessionController {
   }
 
   @Patch(':id')
+  @Role(UserRole.ADMIN)
+  @Message('Tour session updated successfully')
   async update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateTourSessionDto: UpdateTourSessionDto,
@@ -101,7 +118,6 @@ export class TourSessionController {
       updateTourSessionDto,
     );
     return {
-      message: 'Tour session updated successfully',
       data: plainToClass(TourSessionResponseDto, tourSession, {
         excludeExtraneousValues: true,
       }),
@@ -109,6 +125,7 @@ export class TourSessionController {
   }
 
   @Delete(':id')
+  @Role(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.tourSessionService.remove(id);

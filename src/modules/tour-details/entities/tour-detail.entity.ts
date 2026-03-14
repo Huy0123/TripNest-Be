@@ -5,7 +5,7 @@ import {
   OneToOne,
   Index,
   JoinColumn,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
 } from 'typeorm';
 import { Tour } from '@/modules/tours/entities/tour.entity';
 export interface IMoreInfo {
@@ -23,16 +23,17 @@ export interface IItineraryItem {
 export interface ITourImage {
   url: string;
   publicId: string;
+  type?: 'image' | 'video';
 }
 
 @Entity('tour_details')
 export class TourDetail {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn()
   id: string;
 
   @Index()
   @OneToOne(() => Tour, (tour) => tour.detail, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'tour_id' })
+  @JoinColumn({ name: 'id' })
   tour: Tour;
 
   @Column({ type: 'jsonb', nullable: true })

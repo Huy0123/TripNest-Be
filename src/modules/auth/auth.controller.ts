@@ -39,7 +39,7 @@ export class AuthController {
   @UseGuards(RefreshJwt)
   @Message('Logout successful.')
   logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const userId = (req.user as any)?.id || (req.user as any)?.sub;
+    const userId = (req.user as any)?.id;
     return this.authService.logout(userId, res);
   }
 
@@ -93,16 +93,11 @@ export class AuthController {
     );
   }
 
-  @Get('me')
-  getProfile(@Req() req: Request) {
-    return req.user;
-  }
-
-  @Post('refresh-token')
+  @Post('refresh')
   @Public()
   @Message('Token refreshed successfully.')
   @UseGuards(RefreshJwt)
-  refreshToken(@Req() req: Request) {
-    return this.authService.handleRefreshToken(req.user);
+  refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.authService.handleRefreshToken(req.user, res);
   }
 }

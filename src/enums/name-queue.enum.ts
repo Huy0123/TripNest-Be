@@ -9,4 +9,4 @@ export const NAME_QUEUE = {
   SEND_MAIL_NOTI_PAYMENT_FAILED: 'send_mail_noti_payment_failed',
   SEND_MAIL_NOTI_TRIP_REMINDER: 'send_mail_noti_trip_reminder',
   SEND_MAIL_NOTI_BOOKING_CANCELLED: 'send_mail_noti_booking_cancelled',
-} as const;
+}

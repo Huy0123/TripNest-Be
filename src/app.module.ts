@@ -19,10 +19,10 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { RolesGuard } from './guards/role.guard';
 import { CacheModule } from '@/modules/cache/cache.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { WebSocketsModule } from './modules/websockets/websockets.module';
 import { PromotionsModule } from './modules/promotions/promotions.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -77,10 +77,10 @@ import { PromotionsModule } from './modules/promotions/promotions.module';
     PaymentsModule,
     MailModule,
     CacheModule,
-    NotificationsModule,
     ChatModule,
     WebSocketsModule,
     PromotionsModule,
+    StatisticsModule,
   ],
   controllers: [AppController],
   providers: [
