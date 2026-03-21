@@ -49,9 +49,9 @@ export class BookingsCronService {
       this.logger.log(`Found ${upcomingBookings.length} bookings to remind.`);
 
       for (const booking of upcomingBookings) {
-        if (!booking.user || !booking.user.email) continue;
+        if (!booking.customerEmail) continue;
 
-        const customerName = booking.user.lastName ? `${booking.user.firstName} ${booking.user.lastName}` : (booking.user.lastName || booking.user.firstName || 'Customer');
+        const customerName = booking.customerName || 'Customer';
         const tourName = booking.session?.tour?.name || 'Your amazing trip';
         const departureDate = dayjs(booking.session.startDate).format('DD/MM/YYYY');
         const departureTime = dayjs(booking.session.startDate).format('HH:mm');
@@ -60,7 +60,7 @@ export class BookingsCronService {
         const daysUntilTrip = dayjs(booking.session.startDate).diff(dayjs(), 'day');
 
         try {
-          await this.mailService.sendTripReminderEmail(booking.user.email, {
+          await this.mailService.sendTripReminderEmail(booking.customerEmail, {
             bookingCode: booking.bookingCode,
             tourName,
             departureDate,

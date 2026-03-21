@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ChatSession, ChatSessionStatus } from './entities/chat-session.entity';
+import { ChatSession } from './entities/chat-session.entity';
 import { Repository } from 'typeorm';
-import { ChatMessage, ChatSender } from './entities/chat-message.entity';
+import { ChatMessage } from './entities/chat-message.entity';
 import { User } from '../users/entities/user.entity';
+import { ChatSessionStatus, ChatSender } from '@/enums/chat.enum';
 
 @Injectable()
 export class ChatService {

@@ -1,30 +1,40 @@
 import { Booking } from '@/modules/bookings/entities/booking.entity';
-import { AbstractEntity } from '@/common/abstract.entity';
+import { BaseEntity } from '@/common/base.entity';
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
-
-export enum PaymentStatus {
-  PENDING = 'PENDING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-}
-
-export enum PaymentProvider {
-  VNPAY = 'VNPAY',
-}
+import { PaymentStatus } from '@/enums/payment-status.enum';
+import { PaymentProvider } from '@/enums/payment-provider.enum';
 
 @Entity('payments')
 @Index(['status'])
 @Index(['provider'])
 @Index(['createdAt'])
 @Index(['booking'])
-export class Payment extends AbstractEntity {
+@Index(['transactionRef'])
+export class Payment extends BaseEntity {
+  @ManyToOne(() => Booking, (booking) => booking.payments, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn()
+  booking: Booking;
+
+  /**
+   * VNPay vnp_TxnRef — used to link the return/IPN callback back to this payment.
+   * Format: {bookingId}_{timestamp}
+   */
   @Column({ unique: true, nullable: true })
+  transactionRef: string;
+
+  /**
+   * VNPay vnp_TransactionNo — returned by VNPay on successful payment.
+   */
+  @Column({ nullable: true })
   transactionId: string;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2 })
+  @Column({ type: 'numeric', precision: 15, scale: 2 })
   amount: number;
 
-  @Column({ default: 'VND' })
+  @Column({ default: 'VND', length: 3 })
   currency: string;
 
   @Column({
@@ -34,13 +44,26 @@ export class Payment extends AbstractEntity {
   })
   provider: PaymentProvider;
 
-  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
+  })
   status: PaymentStatus;
 
-  @Column({ type: 'jsonb', nullable: true })
-  metadata: any;
+  /** VNPay vnp_ResponseCode */
+  @Column({ nullable: true })
+  responseCode: string;
 
-  @ManyToOne(() => Booking, (booking) => booking.payments)
-  @JoinColumn()
-  booking: Booking;
+  /** VNPay vnp_PayDate */
+  @Column({ nullable: true })
+  payDate: string;
+
+  /** Human-readable message from gateway */
+  @Column({ type: 'text', nullable: true })
+  gatewayMessage: string;
+
+  /** Full raw callback payload for debugging */
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, unknown>;
 }

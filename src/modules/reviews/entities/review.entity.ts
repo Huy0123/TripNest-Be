@@ -1,24 +1,14 @@
 import { Tour } from '@/modules/tours/entities/tour.entity';
 import { User } from '@/modules/users/entities/user.entity';
-import {
-  Column,
-  CreateDateColumn,
-  DeleteDateColumn,
-  Entity,
-  Index,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { SoftDeleteEntity } from '@/common/soft-delete.entity';
+
 @Entity('reviews')
 @Index(['tour'])
 @Index(['user'])
 @Index(['tour', 'createdAt'])
 @Index(['rating'])
-export class Review {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class Review extends SoftDeleteEntity {
   @ManyToOne(() => Tour, (tour) => tour.reviews, { onDelete: 'CASCADE' })
   tour: Tour;
 
@@ -28,18 +18,9 @@ export class Review {
   })
   user: User;
 
-  @Column('int')
+  @Column({ type: 'smallint' })
   rating: number;
 
   @Column({ nullable: true, type: 'text' })
   comment?: string;
-
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
-  deletedAt?: Date;
 }

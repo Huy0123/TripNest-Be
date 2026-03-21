@@ -28,7 +28,12 @@ import * as path from 'path';
         },
         template: {
           dir: path.join(__dirname, 'templates'),
-          adapter: new HandlebarsAdapter(),
+          adapter: new HandlebarsAdapter({
+            formatCurrency: (value: number) => {
+              if (value === null || value === undefined) return '';
+              return new Intl.NumberFormat('vi-VN').format(value);
+            },
+          }),
           options: {
             strict: true,
           },

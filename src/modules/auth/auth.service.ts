@@ -7,7 +7,9 @@ import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import { AuthProvider } from '@/enums/auth.enum';
+import { ErrorMessages } from '@/constants/error-messages.constant';
 import ms = require('ms');
+
 @Injectable()
 export class AuthService {
   private logger = new Logger(AuthService.name);
@@ -31,7 +33,7 @@ export class AuthService {
 
     if (!user.password || !user.providers?.includes(AuthProvider.LOCAL)) {
       throw new HttpException(
-        'Email này được đăng ký bằng Google. Vui lòng đăng nhập bằng Google hoặc Đăng ký tài khoản để tạo mật khẩu.',
+        ErrorMessages.AUTH.GOOGLE_ACCOUNT,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -47,9 +49,9 @@ export class AuthService {
     try {
       return this.createTokensAndResponse(user, res, rememberMe);
     } catch (error) {
-      this.logger.error('Error during login', error.stack);
+      this.logger.error('Lỗi khi đăng nhập', error.stack);
       throw new HttpException(
-        'Could not log in',
+        ErrorMessages.AUTH.INVALID_CREDENTIALS,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -57,12 +59,7 @@ export class AuthService {
 
   async logout(userId: string, res: Response) {
     await this.usersService.updateHashedRefreshToken(userId, null);
-    const cookieOptions = {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax' as const,
-      path: '/',
-    };
+    const cookieOptions = this.buildCookieOptions();
     res.clearCookie('refreshToken', cookieOptions);
     res.clearCookie('accessToken', cookieOptions);
   }
@@ -75,9 +72,12 @@ export class AuthService {
       });
 
       const payload = ticket.getPayload();
-      
+
       if (!payload) {
-        throw new HttpException('Invalid Google Token', HttpStatus.UNAUTHORIZED);
+        throw new HttpException(
+          ErrorMessages.AUTH.GOOGLE_FAILED,
+          HttpStatus.UNAUTHORIZED,
+        );
       }
 
       const { email, given_name, family_name, picture, sub } = payload;
@@ -90,11 +90,11 @@ export class AuthService {
         googleId: sub,
       });
 
-      return this.createTokensAndResponse(existingUser, res, true); 
+      return this.createTokensAndResponse(existingUser, res, true);
     } catch (error) {
-      this.logger.error('Error during Google login', error.stack);
+      this.logger.error('Lỗi khi đăng nhập Google', error.stack);
       throw new HttpException(
-        'Could not log in with Google',
+        ErrorMessages.AUTH.GOOGLE_FAILED,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -120,91 +120,88 @@ export class AuthService {
     return await this.usersService.verifyForgotPasswordOtp(email, otp);
   }
 
-  async resetPassword(email: string, otp: string, newPassword: string, confirmNewPassword: string) {
+  async resetPassword(
+    email: string,
+    otp: string,
+    newPassword: string,
+    confirmNewPassword: string,
+  ) {
     if (newPassword !== confirmNewPassword) {
-      throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        ErrorMessages.AUTH.PASSWORD_MISMATCH,
+        HttpStatus.BAD_REQUEST,
+      );
     }
     return await this.usersService.resetPassword(email, otp, newPassword);
   }
 
-  async findUserById(id: string) {
-    return await this.usersService.findUserById(id);
+  async findUserById(id: string, withRefreshToken = false) {
+    return await this.usersService.findUserById(id, withRefreshToken);
   }
 
-  handleRefreshToken(user: any, res: Response) {
+  async handleRefreshToken(user: any, res: Response) {
     try {
-      const payload = {
-        email: user.email,
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatar: user.avatar,
-        phoneNumber: user.phoneNumber,
-        role: user.role,
-      };
-
-      const accessToken = this.jwtService.sign(payload, {
-        expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '15m',
-      });
-
-      const cookieOptions: any = {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        path: '/',
-      };
-
-      res.cookie('accessToken', accessToken, cookieOptions);
-
-      return {
-        success: true,
-        message: 'Token refreshed successfully',
-        user: {
-          ...payload,
-          providers: user.providers,
-        }
-      };
+      return await this.createTokensAndResponse(user, res, true); 
     } catch (error) {
-      this.logger.error('Error refreshing token', error.stack);
+      this.logger.error('Lỗi khi làm mới token', error.stack);
       throw new HttpException(
-        'Could not refresh token',
+        ErrorMessages.AUTH.TOKEN_REFRESH_FAILED,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
-  private genRefreshToken(payload: any) {
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
-    });
-    return refreshToken;
-  }
-
-  private async createTokensAndResponse(user: any, res: Response, rememberMe: boolean = false) {
-    const payload = {
+  private buildJwtPayload(user: any) {
+    return {
       email: user.email,
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       avatar: user.avatar,
-      phoneNumber: user.phoneNumber,
-      role: user.role
+      phone: user.phone,
+      role: user.role,
     };
+  }
+
+  private buildCookieOptions(maxAge?: number): Record<string, any> {
+    const isProd = this.configService.get('NODE_ENV') === 'production';
+    const options: Record<string, any> = {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      path: '/',
+    };
+    if (maxAge) options.maxAge = maxAge;
+    return options;
+  }
+
+  private genRefreshToken(payload: any) {
+    return this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
+    });
+  }
+
+  private async createTokensAndResponse(
+    user: any,
+    res: Response,
+    rememberMe: boolean = false,
+  ) {
+    const payload = this.buildJwtPayload(user);
 
     if (!user.isActive) {
       await this.usersService.sendVerificationAccount(user.email);
       throw new HttpException(
-        {
-          message: 'Account is not active',
-          email: user.email,
-        },
+        { message: ErrorMessages.AUTH.ACCOUNT_INACTIVE, email: user.email },
         HttpStatus.FORBIDDEN,
       );
     }
 
     const refreshToken = this.genRefreshToken(payload);
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-    await this.usersService.updateHashedRefreshToken(user.id, hashedRefreshToken);
+    await this.usersService.updateHashedRefreshToken(
+      user.id,
+      hashedRefreshToken,
+    );
 
     const expiredTime = this.configService.get<string>(
       'JWT_REFRESH_EXPIRES_IN',
@@ -213,30 +210,15 @@ export class AuthService {
       ? ms(expiredTime as ms.StringValue) || 15 * 60 * 1000
       : undefined;
 
-    const cookieOptions: any = {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      path: '/',
-    };
-
-    if (maxAge) {
-      cookieOptions.maxAge = maxAge;
-    }
+    const cookieOptions = this.buildCookieOptions(maxAge);
 
     res.cookie('refreshToken', refreshToken, cookieOptions);
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
     });
-
     res.cookie('accessToken', accessToken, cookieOptions);
 
-    return {
-      user: {
-        ...payload,
-        providers: user.providers,
-      }
-    };
+    return { user: { ...payload, providers: user.providers } };
   }
 }

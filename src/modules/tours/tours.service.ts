@@ -35,7 +35,7 @@ export class ToursService {
     );
     if (!departureLocation) {
       throw new NotFoundException(
-        `Departure location with ID ${createTourDto.departureLocationId} not found`,
+        `Không tìm thấy địa điểm khởi hành với ID ${createTourDto.departureLocationId}`,
       );
     }
     if (
@@ -43,29 +43,20 @@ export class ToursService {
       destinations.length !== createTourDto.destinationIds.length
     ) {
       throw new NotFoundException(
-        `One or more destination locations not found`,
+        `Một hoặc nhiều địa điểm đến không tồn tại`,
       );
     }
 
-    const tour = this.tourRepository.create(createTourDto);
-    tour.departureLocation = departureLocation;
-    tour.destinations = destinations;
-
     try {
+      // Tạo tour
+      const tour = this.tourRepository.create(createTourDto);
+      tour.departureLocation = departureLocation;
+      tour.destinations = destinations;
       const savedTour = await this.tourRepository.save(tour);
-
-      if (createTourDto.detail) {
-        const tourDetail = this.tourDetailRepository.create({
-          ...createTourDto.detail,
-          id: savedTour.id,
-        });
-        savedTour.detail = await this.tourDetailRepository.save(tourDetail);
-      }
-
       await this.cacheService.incrementCacheVersion('tours');
       return savedTour;
     } catch (error) {
-      throw new BadRequestException('Failed to create tour: ' + error.message);
+      throw new BadRequestException('Tạo tour thất bại: ' + error.message);
     }
   }
 
@@ -77,7 +68,7 @@ export class ToursService {
         );
       if (!departureLocation) {
         throw new NotFoundException(
-          `Departure location with ID ${updateTourDto.departureLocationId} not found`,
+          `Không tìm thấy địa điểm khởi hành với ID ${updateTourDto.departureLocationId}`,
         );
       }
     }
@@ -91,7 +82,7 @@ export class ToursService {
         destinations.length !== updateTourDto.destinationIds.length
       ) {
         throw new NotFoundException(
-          `One or more destination locations not found`,
+          `Một hoặc nhiều địa điểm đến không tồn tại`,
         );
       }
     }
@@ -101,17 +92,9 @@ export class ToursService {
         relations: ['departureLocation', 'destinations', 'detail'],
       });
       if (!result) {
-        throw new NotFoundException(`Tour with ID ${id} not found`);
+        throw new NotFoundException(`Không tìm thấy tour với ID ${id}`);
       }
       const updatedTour = this.tourRepository.merge(result, updateTourDto);
-
-      if (updateTourDto.detail) {
-        const tourDetail = this.tourDetailRepository.create({
-          ...updateTourDto.detail,
-          id: result.id,
-        });
-        updatedTour.detail = await this.tourDetailRepository.save(tourDetail);
-      }
 
       await this.cacheService.incrementCacheVersion('tours');
       await this.cacheService.del(`tours:${id}`);
@@ -120,7 +103,7 @@ export class ToursService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('Failed to update tour: ' + error.message);
+      throw new BadRequestException('Cập nhật tour thất bại: ' + error.message);
     }
   }
 
@@ -137,10 +120,8 @@ export class ToursService {
       rating,
       duration,
       stayOption,
-      date,
       sortBy = 'createdAt',
       sortOrder = 'DESC',
-      isPopular,
       destinationSearch,
     } = query;
 
@@ -226,14 +207,6 @@ export class ToursService {
       queryBuilder.andWhere('tour.stayOption = :stayOption', { stayOption });
     }
 
-    if (date) {
-      queryBuilder.andWhere('tour.date = :date', { date });
-    }
-
-    if (isPopular !== undefined) {
-      queryBuilder.andWhere('tour.isPopular = :isPopular', { isPopular });
-    }
-
     queryBuilder.orderBy(`tour.${sortBy}`, sortOrder);
     queryBuilder.skip((page - 1) * limit).take(limit);
 
@@ -242,6 +215,14 @@ export class ToursService {
 
     await this.cacheService.set(cacheKey, result, 300_000); // 5 minutes
     return result;
+  }
+
+  async findByDiscount() {
+    return await this.tourRepository.find({
+      where: { discount: MoreThan(0) },
+      order: { discount: 'DESC' },
+      take: 15,
+    });
   }
 
   async findOne(id: string): Promise<Tour> {
@@ -253,23 +234,14 @@ export class ToursService {
 
     const tour = await this.tourRepository.findOne({
       where: { id },
-      relations: ['departureLocation', 'destinations', 'detail', 'sessions', 'reviews'],
+      relations: ['departureLocation', 'destinations', 'detail', 'sessions'],
     });
 
     if (!tour) {
-      throw new NotFoundException(`Tour with ID ${id} not found`);
+      throw new NotFoundException(`Không tìm thấy tour với ID ${id}`);
     }
 
     await this.cacheService.set(cacheKey, tour, 600_000); // 10 minutes
-    return tour;
-  }
-
-  async findByDiscount() {
-    const tour = await this.tourRepository.find({
-      where: { discount: MoreThan(0) },
-      order: { discount: 'DESC' },
-      take: 15
-    });
     return tour;
   }
 
@@ -289,18 +261,18 @@ export class ToursService {
         await this.cacheService.del(`tours:location:${destId}`);
       }
     } catch (error) {
-      throw new BadRequestException('Failed to delete tour: ' + error.message);
+      throw new BadRequestException('Xóa tour thất bại: ' + error.message);
     }
   }
 
-  async uploadImage(id: string, file: Express.Multer.File): Promise<{message: string, image: string}> {
+  async uploadImage(id: string, file: Express.Multer.File): Promise<{ message: string; image: string }> {
     const tour = await this.tourRepository.findOne({ where: { id } });
     if (!tour) {
-      throw new NotFoundException(`Tour with ID ${id} not found`);
+      throw new NotFoundException(`Không tìm thấy tour với ID ${id}`);
     }
 
     if (!file) {
-      throw new BadRequestException('No image file uploaded');
+      throw new BadRequestException('Chưa có file ảnh được tải lên');
     }
 
     try {
@@ -321,11 +293,11 @@ export class ToursService {
       await this.cacheService.del(`tours:${id}`);
 
       return {
-        message: `${tour.imageType === 'video' ? 'Video' : 'Image'} uploaded successfully`,
+        message: `${tour.imageType === 'video' ? 'Video' : 'Ảnh'} đã được tải lên thành công`,
         image: tour.image,
       };
     } catch (error) {
-      throw new BadRequestException('Failed to upload image: ' + error.message);
+      throw new BadRequestException('Tải ảnh thất bại: ' + error.message);
     }
   }
 }

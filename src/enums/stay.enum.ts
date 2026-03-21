@@ -1,7 +1,7 @@
 export enum StayOption {
-    HOTELS = 'HOTEL',
-    LODGES = 'LODGE',
-    RESORTS = 'RESORT',
-    INNS = 'INN',
-    HOMESTAY = 'HOMESTAY'
-}
+  HOTEL = 'HOTEL',
+  LODGE = 'LODGE',
+  RESORT = 'RESORT',
+  INN = 'INN',
+  HOMESTAY = 'HOMESTAY',
+}

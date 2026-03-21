@@ -7,9 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  HttpStatus,
-  HttpCode,
-  ValidationPipe,
   UseInterceptors,
   ClassSerializerInterceptor,
 } from '@nestjs/common';
@@ -18,6 +15,7 @@ import { CreateTourSessionDto } from './dto/create-tour-session.dto';
 import { UpdateTourSessionDto } from './dto/update-tour-session.dto';
 import { BulkCreateTourSessionDto } from './dto/bulk-create-tour-session.dto';
 import { TourSessionResponseDto } from './dto/tour-session-response.dto';
+import { TourSessionQueryDto, TourSessionMode } from './dto/tour-session-query.dto';
 import { plainToClass } from 'class-transformer';
 import { Public } from '@/decorators/public.decorator';
 import { Role } from '@/decorators/role.decorator';
@@ -31,19 +29,19 @@ export class TourSessionController {
 
   @Post()
   @Role(UserRole.ADMIN)
-  @Message('Tour session created successfully')
-  async create(@Body(ValidationPipe) createDto: CreateTourSessionDto) {
+  @Message('Tạo phiên tour thành công')
+  async create(@Body() createDto: CreateTourSessionDto) {
     return await this.tourSessionService.create(createDto);
   }
 
   @Post('bulk')
   @Role(UserRole.ADMIN)
-  @Message('Tour sessions bulk created successfully')
-  async bulkCreate(@Body(ValidationPipe) bulkCreateDto: BulkCreateTourSessionDto) {
+  @Message('Tạo nhiều phiên tour thành công')
+  async bulkCreate(@Body() bulkCreateDto: BulkCreateTourSessionDto) {
     const result = await this.tourSessionService.bulkCreate(bulkCreateDto);
     return {
-      message: `${result.count} tour sessions bulk created successfully`,
-      data: result.sessions.map((session) =>
+      count: result.count,
+      sessions: result.sessions.map((session) =>
         plainToClass(TourSessionResponseDto, session, {
           excludeExtraneousValues: true,
         }),
@@ -53,84 +51,70 @@ export class TourSessionController {
 
   @Get()
   @Public()
-  async findAll(
-    @Query('available') available?: string,
-    @Query('upcoming') upcoming?: string,
-  ) {
+  @Message('Lấy danh sách phiên tour thành công')
+  async findAll(@Query() query: TourSessionQueryDto) {
     let sessions;
 
-    if (available === 'true') {
-      sessions = await this.tourSessionService.findAvailable();
-    } else if (upcoming) {
-      const days = parseInt(upcoming) || 30;
-      sessions = await this.tourSessionService.findUpcoming(days);
-    } else {
-      sessions = await this.tourSessionService.findAll();
+    switch (query.mode) {
+      case TourSessionMode.AVAILABLE:
+        sessions = await this.tourSessionService.findAvailable();
+        break;
+      case TourSessionMode.UPCOMING:
+        sessions = await this.tourSessionService.findUpcoming(query.days);
+        break;
+      default:
+        sessions = await this.tourSessionService.findAll();
     }
 
-    return {
-      message: 'Tour sessions retrieved successfully',
-      data: sessions.map((session) =>
-        plainToClass(TourSessionResponseDto, session, {
-          excludeExtraneousValues: true,
-        }),
-      ),
-      total: sessions.length,
-    };
+    return sessions.map((session) =>
+      plainToClass(TourSessionResponseDto, session, {
+        excludeExtraneousValues: true,
+      }),
+    );
   }
 
   @Get('tour/:tourId')
   @Public()
+  @Message('Lấy danh sách phiên của tour thành công')
   async findByTour(@Param('tourId') tourId: string) {
     const sessions = await this.tourSessionService.findByTour(tourId);
-    return {
-      message: 'Tour sessions by tour retrieved successfully',
-      data: sessions.map((session) =>
-        plainToClass(TourSessionResponseDto, session, {
-          excludeExtraneousValues: true,
-        }),
-      ),
-      total: sessions.length,
-    };
+    return sessions.map((session) =>
+      plainToClass(TourSessionResponseDto, session, {
+        excludeExtraneousValues: true,
+      }),
+    );
   }
 
   @Get(':id')
   @Public()
+  @Message('Lấy thông tin phiên tour thành công')
   async findOne(@Param('id') id: string) {
     const tourSession = await this.tourSessionService.findOne(id);
-    return {
-      message: 'Tour session retrieved successfully',
-      data: plainToClass(TourSessionResponseDto, tourSession, {
-        excludeExtraneousValues: true,
-      }),
-    };
+    return plainToClass(TourSessionResponseDto, tourSession, {
+      excludeExtraneousValues: true,
+    });
   }
 
   @Patch(':id')
   @Role(UserRole.ADMIN)
-  @Message('Tour session updated successfully')
+  @Message('Cập nhật phiên tour thành công')
   async update(
     @Param('id') id: string,
-    @Body(ValidationPipe) updateTourSessionDto: UpdateTourSessionDto,
+    @Body() updateTourSessionDto: UpdateTourSessionDto,
   ) {
     const tourSession = await this.tourSessionService.update(
       id,
       updateTourSessionDto,
     );
-    return {
-      data: plainToClass(TourSessionResponseDto, tourSession, {
-        excludeExtraneousValues: true,
-      }),
-    };
+    return plainToClass(TourSessionResponseDto, tourSession, {
+      excludeExtraneousValues: true,
+    });
   }
 
   @Delete(':id')
   @Role(UserRole.ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @Message('Xóa phiên tour thành công')
   async remove(@Param('id') id: string) {
     await this.tourSessionService.remove(id);
-    return {
-      message: 'Tour session deleted successfully',
-    };
   }
 }

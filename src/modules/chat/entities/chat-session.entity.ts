@@ -1,16 +1,11 @@
 import { User } from '@/modules/users/entities/user.entity';
-import { AbstractEntity } from '@/common/abstract.entity';
+import { BaseEntity } from '@/common/base.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { ChatMessage } from './chat-message.entity';
-
-export enum ChatSessionStatus {
-  OPEN = 'OPEN',
-  CLOSED = 'CLOSED',
-  ARCHIVED = 'ARCHIVED',
-}
+import { ChatSessionStatus } from '@/enums/chat.enum';
 
 @Entity('chat_sessions')
-export class ChatSession extends AbstractEntity {
+export class ChatSession extends BaseEntity {
   @Column({
     type: 'enum',
     enum: ChatSessionStatus,

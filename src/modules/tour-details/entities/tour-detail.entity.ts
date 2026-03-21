@@ -1,18 +1,7 @@
-import {
-  Column,
-  Entity,
-  OneToMany,
-  OneToOne,
-  Index,
-  JoinColumn,
-  PrimaryColumn,
-} from 'typeorm';
+import { Column, Entity, Index, JoinColumn, OneToOne } from 'typeorm';
 import { Tour } from '@/modules/tours/entities/tour.entity';
-export interface IMoreInfo {
-  title: string;
-  subtitle?: string;
-  items: string[];
-}
+import { SoftDeleteEntity } from '@/common/soft-delete.entity';
+
 
 export interface IItineraryItem {
   day: string;
@@ -27,17 +16,20 @@ export interface ITourImage {
 }
 
 @Entity('tour_details')
-export class TourDetail {
-  @PrimaryColumn()
-  id: string;
-
+export class TourDetail extends SoftDeleteEntity {
   @Index()
   @OneToOne(() => Tour, (tour) => tour.detail, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'id' })
+  @JoinColumn({ name: 'tourId' })
   tour: Tour;
 
-  @Column({ type: 'jsonb', nullable: true })
-  moreInfo: IMoreInfo[];
+  @Column({ nullable: true })
+  tourId: string;
+
+  @Column('simple-array', { nullable: true })
+  inclusions: string[];
+
+  @Column('simple-array', { nullable: true })
+  exclusions: string[];
 
   @Column({ type: 'text', nullable: true })
   experience: string;

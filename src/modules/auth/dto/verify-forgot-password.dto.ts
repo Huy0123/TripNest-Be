@@ -2,11 +2,11 @@ import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
 
 export class VerifyForgotPasswordDto {
   @IsNotEmpty()
-  @IsEmail({}, { message: 'Invalid email format' })
+  @IsEmail({}, { message: 'Email không hợp lệ' })
   email: string;
 
   @IsNotEmpty()
   @IsString()
-  @Length(8, 8, { message: 'OTP must be exactly 8 characters' })
+  @Length(6, 6, { message: 'OTP phải có 6 ký tự' })
   otp: string;
 }

@@ -2,50 +2,50 @@ import { TourSession } from '@/modules/tour-session/entities/tour-session.entity
 import { User } from '@/modules/users/entities/user.entity';
 import { Payment } from '@/modules/payments/entities/payment.entity';
 import { Promotion } from '@/modules/promotions/entities/promotion.entity';
+import { Tour } from '@/modules/tours/entities/tour.entity';
 import {
   Column,
-  CreateDateColumn,
-  DeleteDateColumn,
   Entity,
-  Generated,
   Index,
   ManyToOne,
   OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  BeforeInsert,
 } from 'typeorm';
 import { BookingStatus } from '@/enums/booking-status.enum';
+import { SoftDeleteEntity } from '@/common/soft-delete.entity';
 
 @Entity('bookings')
 @Index(['user'])
 @Index(['session'])
 @Index(['status'])
 @Index(['user', 'status'])
+@Index(['tour'])
 @Index(['createdAt'])
-export class Booking {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class Booking extends SoftDeleteEntity {
   @Column({ unique: true, type: 'varchar', length: 20 })
   bookingCode: string;
 
-  @BeforeInsert()
-  generateBookingCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    this.bookingCode = `TN-${result}`;
-  }
+  @Column({ type: 'varchar', length: 100 })
+  customerName: string;
+
+  @Column({ type: 'varchar' })
+  customerEmail: string;
+
+  @Column({ type: 'varchar' })
+  customerPhone: string;
 
   @ManyToOne(() => User, (user) => user.bookings, { onDelete: 'CASCADE' })
   user: User;
 
+  @ManyToOne(() => Tour, (tour) => tour.bookings, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  tour: Tour;
+
   @ManyToOne(() => TourSession, (session) => session.bookings, {
     onDelete: 'SET NULL',
     eager: true,
+    nullable: true,
   })
   session: TourSession;
 
@@ -55,25 +55,43 @@ export class Booking {
   @Column({ type: 'int', default: 0, comment: 'Số trẻ em (2-11 tuổi)' })
   children: number;
 
-  // Giá booking
   @Column({
-    type: 'decimal',
+    type: 'numeric',
     precision: 15,
     scale: 2,
     comment: 'Giá người lớn',
   })
   adultPrice: number;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, comment: 'Giá trẻ em' })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    comment: 'Giá trẻ em',
+  })
   childrenPrice: number;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, comment: 'Tổng tiền' })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    comment: 'Tổng tiền sau giảm giá',
+  })
   totalAmount: number;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0, comment: 'Tiền được giảm qua Khuyến mãi' })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    comment: 'Tiền được giảm qua khuyến mãi',
+  })
   discountAmount: number;
 
-  @ManyToOne(() => Promotion, (promo) => promo.bookings, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Promotion, (promo) => promo.bookings, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   promotion?: Promotion;
 
   @Column({
@@ -86,15 +104,9 @@ export class Booking {
   @Column({ type: 'boolean', default: false })
   isReminderSent: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  paymentTimeoutJobId?: string;
+
   @OneToMany(() => Payment, (payment) => payment.booking)
   payments: Payment[];
-
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
-  deletedAt?: Date;
 }

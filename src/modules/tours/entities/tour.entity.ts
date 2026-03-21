@@ -1,51 +1,45 @@
 import {
   Column,
-  CreateDateColumn,
-  DeleteDateColumn,
   Entity,
   Index,
   ManyToOne,
   ManyToMany,
   JoinTable,
-  JoinColumn,
   OneToOne,
   OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { Location } from '@/modules/location/entities/location.entity';
 import { TourDetail } from '@/modules/tour-details/entities/tour-detail.entity';
 import { StayOption } from '@/enums/stay.enum';
 import { TourSession } from '@/modules/tour-session/entities/tour-session.entity';
+import { Booking } from '@/modules/bookings/entities/booking.entity';
 import { Review } from '@/modules/reviews/entities/review.entity';
+import { SoftDeleteEntity } from '@/common/soft-delete.entity';
 
 @Entity('tours')
-export class Tour {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class Tour extends SoftDeleteEntity {
   @Index()
-  @Column({unique: true})
+  @Column({ unique: true })
   name: string;
 
   @Index()
   @Column('int')
   duration: number;
 
-  @Column('simple-array', {nullable: true})
+  @Column('simple-array', { nullable: true })
   guideService: string[];
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   image: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   imagePublicId: string;
 
-  @Column({nullable: true, default: 'image'})
+  @Column({ nullable: true, default: 'image' })
   imageType: string;
 
   @Index()
-  @Column({ default: 0 })
+  @Column({ type: 'numeric', precision: 15, scale: 2, default: 0 })
   price: number;
 
   @Index()
@@ -53,14 +47,14 @@ export class Tour {
   discount: number;
 
   @Index()
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'numeric', precision: 3, scale: 2, default: 0 })
   rating: number;
 
   @Column({ default: 0 })
   reviewCount: number;
 
   @Index()
-  @Column({type: 'enum', enum: StayOption, nullable: true})
+  @Column({ type: 'enum', enum: StayOption, nullable: true })
   stayOption: StayOption;
 
   @ManyToOne(() => Location, (location) => location.departureTours)
@@ -83,13 +77,6 @@ export class Tour {
   @OneToMany(() => Review, (review) => review.tour)
   reviews: Review[];
 
-  @Index()
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
-  deletedAt?: Date;
+  @OneToMany(() => Booking, (booking) => booking.tour)
+  bookings: Booking[];
 }

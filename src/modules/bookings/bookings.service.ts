@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CreateBookingDto } from './dto/create-booking.dto';
-import { UpdateBookingDto } from './dto/update-booking.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Booking } from './entities/booking.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -9,10 +8,17 @@ import { TourSession } from '../tour-session/entities/tour-session.entity';
 import { BookingStatus } from '@/enums/booking-status.enum';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
-import { EventsGateway } from '@/modules/websockets/events.gateway'
-import { Promotion, DiscountType } from '../promotions/entities/promotion.entity';
+import { Payment } from '../payments/entities/payment.entity';
+import { PaymentStatus } from '@/enums/payment-status.enum';
+import { EventsGateway } from '@/modules/websockets/events.gateway';
+import { Promotion } from '../promotions/entities/promotion.entity';
+import { DiscountType } from '@/enums/discount-type.enum';
 import { MailService } from '../mail/mail.service';
+import { ErrorMessages } from '@/constants/error-messages.constant';
+import { CacheKeys } from '@/constants/cache-keys.constant';
+import { generateBookingCode } from '@/utils/booking-code.util';
+
+const PAYMENT_TIMEOUT_MS = 15 * 60 * 1000; // 15 phút
 
 @Injectable()
 export class BookingsService {
@@ -28,13 +34,16 @@ export class BookingsService {
   ) {}
 
   async createBooking(createBookingDto: CreateBookingDto, userId: string) {
-    const { sessionId, adults, children, promoCode } = createBookingDto;
+    const { sessionId, tourId, adults, children, promoCode, customerName, customerEmail, customerPhone } = createBookingDto;
     const totalPeople = adults + children;
 
     const cacheKey = `booking_lock:${userId}:${sessionId}`;
-    const isLocked = await this.cacheService.acquireLock(cacheKey, 5_000); // 5ms
+    const isLocked = await this.cacheService.acquireLock(cacheKey, 5_000); // 5 giây
     if (!isLocked) {
-      throw new HttpException('Please wait a moment before booking again', HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(
+        ErrorMessages.BOOKING.RATE_LIMIT,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -49,17 +58,22 @@ export class BookingsService {
         .getOne();
 
       if (!session) {
-        throw new HttpException('Tour session not found', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          ErrorMessages.NOT_FOUND.SESSION,
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       if (session.bookedCount + totalPeople > session.capacity) {
-        throw new HttpException('Tour session is fully booked', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          ErrorMessages.BOOKING.SESSION_FULL,
+          HttpStatus.BAD_REQUEST,
+        );
       }
+
       const adultPrice = Number(session.adultPrice);
       const childPrice = Number(session.childrenPrice);
-      
-      let totalAmount = (adults * adultPrice) + (children * childPrice);
-
+      let totalAmount = adults * adultPrice + children * childPrice;
       let discountAmount = 0;
       let appliedPromotion: Promotion | null = null;
 
@@ -71,28 +85,55 @@ export class BookingsService {
           .getOne();
 
         if (!appliedPromotion) {
-          throw new HttpException('Invalid promo code', HttpStatus.BAD_REQUEST);
+          throw new HttpException(
+            ErrorMessages.PROMO.INVALID,
+            HttpStatus.BAD_REQUEST,
+          );
         }
         if (!appliedPromotion.isActive) {
-          throw new HttpException('Promo code is not active', HttpStatus.BAD_REQUEST);
+          throw new HttpException(
+            ErrorMessages.PROMO.INACTIVE,
+            HttpStatus.BAD_REQUEST,
+          );
         }
-        
+
         const now = new Date();
-        if (now < appliedPromotion.startDate || now > appliedPromotion.endDate) {
-          throw new HttpException('Promo code is expired or not yet valid', HttpStatus.BAD_REQUEST);
+        if (
+          now < appliedPromotion.startDate ||
+          now > appliedPromotion.endDate
+        ) {
+          throw new HttpException(
+            ErrorMessages.PROMO.EXPIRED,
+            HttpStatus.BAD_REQUEST,
+          );
         }
-        if (appliedPromotion.usageLimit > 0 && appliedPromotion.usedCount >= appliedPromotion.usageLimit) {
-          throw new HttpException('Promo code usage limit has been reached', HttpStatus.BAD_REQUEST);
+        if (
+          appliedPromotion.usageLimit > 0 &&
+          appliedPromotion.usedCount >= appliedPromotion.usageLimit
+        ) {
+          throw new HttpException(
+            ErrorMessages.PROMO.LIMIT_REACHED,
+            HttpStatus.BAD_REQUEST,
+          );
         }
         if (totalAmount < appliedPromotion.minOrderValue) {
-          throw new HttpException(`Minimum order value of ${appliedPromotion.minOrderValue} is required`, HttpStatus.BAD_REQUEST);
+          throw new HttpException(
+            ErrorMessages.PROMO.MIN_ORDER,
+            HttpStatus.BAD_REQUEST,
+          );
         }
 
         if (appliedPromotion.discountType === DiscountType.FIXED_AMOUNT) {
           discountAmount = appliedPromotion.discountValue;
-        } else if (appliedPromotion.discountType === DiscountType.PERCENTAGE) {
-          discountAmount = (totalAmount * appliedPromotion.discountValue) / 100;
-          if (appliedPromotion.maxDiscount && discountAmount > appliedPromotion.maxDiscount) {
+        } else if (
+          appliedPromotion.discountType === DiscountType.PERCENTAGE
+        ) {
+          discountAmount =
+            (totalAmount * appliedPromotion.discountValue) / 100;
+          if (
+            appliedPromotion.maxDiscount &&
+            discountAmount > appliedPromotion.maxDiscount
+          ) {
             discountAmount = appliedPromotion.maxDiscount;
           }
         }
@@ -104,8 +145,16 @@ export class BookingsService {
         });
       }
 
+      // Generate crypto-safe booking code within transaction
+      const bookingCode = await generateBookingCode(this.bookingsRepository);
+
       const booking = queryRunner.manager.create(Booking, {
+        bookingCode,
+        customerName,
+        customerEmail,
+        customerPhone,
         session,
+        tour: { id: tourId } as any,
         user: { id: userId } as any,
         adults,
         children,
@@ -122,13 +171,6 @@ export class BookingsService {
       await queryRunner.manager.update(TourSession, session.id, {
         bookedCount: session.bookedCount + totalPeople,
       });
-      const payment = queryRunner.manager.create(Payment, {
-        booking: savedBooking,
-        amount: totalAmount,
-        status: PaymentStatus.PENDING,
-        currency: 'VND',
-      });
-      await queryRunner.manager.save(payment);
 
       await queryRunner.commitTransaction();
 
@@ -136,43 +178,47 @@ export class BookingsService {
         session.id,
         session.bookedCount + totalPeople,
         session.capacity,
-        session.status 
+        session.status,
       );
 
-      this.logger.log(`Booking created: ${savedBooking.id} (${savedBooking.bookingCode}) for user ${userId}`);
-      
-      await this.bookingQueue.add(
+      this.logger.log(
+        `Đặt chỗ thành công: ${savedBooking.id} (${savedBooking.bookingCode}) cho user ${userId}`,
+      );
+
+      const job = await this.bookingQueue.add(
         'check-payment-timeout',
         { bookingId: savedBooking.id },
-        { delay: 15 * 60 * 1000 }
+        { delay: PAYMENT_TIMEOUT_MS },
       );
 
-      await this.cacheService.del(`bookings:user:${userId}`);
-      await this.cacheService.releaseLock(cacheKey);
+      // Store job ID for O(1) removal on payment success
+      await this.bookingsRepository.update(savedBooking.id, {
+        paymentTimeoutJobId: String(job.id),
+      });
 
-      return {  
-        message: 'Booking created successfully', 
+      await this.cacheService.del(CacheKeys.bookings.byUser(userId));
+
+      return {
+        id: savedBooking.id,
         bookingId: savedBooking.id,
         bookingCode: savedBooking.bookingCode,
         totalAmount,
         discountAmount,
-        paymentUrl: null
       };
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      await this.cacheService.releaseLock(cacheKey);
-      this.logger.error(`Booking creation failed: ${error.message}`, error.stack);
+      this.logger.error(`Tạo đặt chỗ thất bại: ${error.message}`, error.stack);
       throw error;
     } finally {
       await queryRunner.release();
+      await this.cacheService.releaseLock(cacheKey);
     }
   }
 
   async findAllByUserId(userId: string) {
-    const cacheKey = `bookings:user:${userId}`;
+    const cacheKey = CacheKeys.bookings.byUser(userId);
     const cachedData = await this.cacheService.get<string>(cacheKey);
-    
+
     if (cachedData) {
       return JSON.parse(cachedData);
     }
@@ -195,7 +241,10 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        ErrorMessages.BOOKING.NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     return booking;
@@ -214,12 +263,15 @@ export class BookingsService {
       });
 
       if (!booking) {
-        throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          ErrorMessages.BOOKING.NOT_FOUND,
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       if (booking.status !== BookingStatus.PENDING) {
         throw new HttpException(
-          'Chỉ có thể hủy những booking đang chờ thanh toán',
+          ErrorMessages.BOOKING.CANCEL_ONLY_PENDING,
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -242,20 +294,20 @@ export class BookingsService {
             session.id,
             session.bookedCount,
             session.capacity,
-            session.status
+            session.status,
           );
         }
       }
 
       await queryRunner.commitTransaction();
 
-      await this.cacheService.del(`bookings:user:${userId}`);
-      this.logger.log(`Booking ${bookingId} was manually cancelled by user ${userId}`);
+      await this.cacheService.del(CacheKeys.bookings.byUser(userId));
+      this.logger.log(`Đặt chỗ ${bookingId} đã bị hủy bởi user ${userId}`);
 
-      return { message: 'Đã hủy booking thành công' };
+      return { bookingId, status: BookingStatus.CANCELED };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Manual cancel failed: ${error.message}`, error.stack);
+      this.logger.error(`Hủy đặt chỗ thất bại: ${error.message}`, error.stack);
       throw error;
     } finally {
       await queryRunner.release();
@@ -270,58 +322,75 @@ export class BookingsService {
     try {
       const booking = await queryRunner.manager.findOne(Booking, {
         where: { id: bookingId },
-        relations: ['user'],
         lock: { mode: 'pessimistic_write' },
+        loadEagerRelations: false,
       });
 
       if (!booking) {
-        throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          ErrorMessages.BOOKING.NOT_FOUND,
+          HttpStatus.NOT_FOUND,
+        );
       }
+
+      // Reload with relations for subsequent logic
+      const bookingWithRelations = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['user', 'tour'],
+      });
 
       booking.status = BookingStatus.PAID;
       await queryRunner.manager.save(booking);
 
-      await queryRunner.manager.update(Payment, { booking: { id: bookingId } }, {
-        status: PaymentStatus.COMPLETED,
-      });
+      await queryRunner.manager.update(
+        Payment,
+        { booking: { id: bookingId } },
+        { status: PaymentStatus.COMPLETED },
+      );
 
-      if (booking.user) {
-        await this.cacheService.del(`bookings:user:${booking.user.id}`);
+      if (bookingWithRelations?.user) {
+        await this.cacheService.del(
+          CacheKeys.bookings.byUser(bookingWithRelations.user.id),
+        );
       }
 
       await queryRunner.commitTransaction();
-      const jobs = await this.bookingQueue.getDelayed();
-      for (const job of jobs) {
-        if (job.name === 'check-payment-timeout' && job.data.bookingId === bookingId) {
-          await job.remove();
-          this.logger.log(`Removed timeout job for booking ${bookingId}`);
-          break;
-        }
+
+      // O(1) job removal using stored job ID
+      if (booking.paymentTimeoutJobId) {
+        const job = await this.bookingQueue.getJob(booking.paymentTimeoutJobId);
+        await job?.remove();
+        this.logger.log(
+          `Đã xóa timeout job cho đặt chỗ ${bookingId}`,
+        );
       }
 
-      if (booking.user && booking.user.email) {
-        const fullSession = await this.dataSource.manager.findOne(TourSession, {
-          where: { id: booking.session.id },
-          relations: ['tour']
-        });
-        const tourName = fullSession?.tour?.name || 'Chuyến đi của bạn';
+      if (booking.customerEmail) {
 
-        this.mailService.sendPaymentSuccessEmail(booking.user.email, {
-          bookingCode: booking.bookingCode,
-          tourName: tourName,
-          amount: booking.totalAmount,
-          paymentDate: new Date().toLocaleString('vi-VN'),
-          customerName: booking.user.lastName ? `${booking.user.firstName} ${booking.user.lastName}` : booking.user.lastName || booking.user.firstName,
-        }).catch(err => {
-          this.logger.error(`Could not send payment success email to ${booking.user.email}:`, err);
-        });
+        this.mailService
+          .sendPaymentSuccessEmail(booking.customerEmail, {
+            bookingCode: booking.bookingCode,
+            tourName: bookingWithRelations?.tour?.name || 'Chuyến đi của bạn',
+            amount: booking.totalAmount,
+            paymentDate: new Date().toLocaleString('vi-VN'),
+            customerName: booking.customerName,
+          })
+          .catch((err) => {
+            this.logger.error(
+              `Không thể gửi email xác nhận thanh toán tới ${booking.customerEmail}:`,
+              err,
+            );
+          });
       }
 
-      this.logger.log(`Payment confirmed successfully for booking ${bookingId}`);
+      this.logger.log(`Xác nhận thanh toán thành công cho đặt chỗ ${bookingId}`);
       return true;
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Failed to confirm payment for booking ${bookingId}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Xác nhận thanh toán thất bại cho đặt chỗ ${bookingId}: ${error.message}`,
+        error.stack,
+      );
       throw error;
     } finally {
       await queryRunner.release();
@@ -336,30 +405,40 @@ export class BookingsService {
     try {
       const booking = await queryRunner.manager.findOne(Booking, {
         where: { id: bookingId },
-        relations: ['user', 'session'],
         lock: { mode: 'pessimistic_write' },
+        loadEagerRelations: false,
       });
 
       if (!booking || booking.status !== BookingStatus.PENDING) {
         await queryRunner.rollbackTransaction();
-        return; // Already handled or not found
+        return;
       }
+
+      // Reload with session for restoration
+      const bookingWithSession = await queryRunner.manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['user', 'session'],
+      });
 
       booking.status = BookingStatus.CANCELED;
       await queryRunner.manager.save(booking);
 
-      await queryRunner.manager.update(Payment, { booking: { id: bookingId } }, {
-        status: PaymentStatus.FAILED,
-      });
+      await queryRunner.manager.update(
+        Payment,
+        { booking: { id: bookingId } },
+        { status: PaymentStatus.FAILED },
+      );
 
-      if (booking.user) {
-        await this.cacheService.del(`bookings:user:${booking.user.id}`);
+      if (bookingWithSession?.user) {
+        await this.cacheService.del(
+          CacheKeys.bookings.byUser(bookingWithSession.user.id),
+        );
       }
 
-      if (booking.session) {
+      if (bookingWithSession?.session) {
         const session = await queryRunner.manager
           .createQueryBuilder(TourSession, 'session')
-          .where('session.id = :id', { id: booking.session.id })
+          .where('session.id = :id', { id: bookingWithSession.session.id })
           .setLock('pessimistic_write')
           .getOne();
 
@@ -371,17 +450,22 @@ export class BookingsService {
             session.id,
             session.bookedCount,
             session.capacity,
-            session.status
+            session.status,
           );
         }
       }
 
       await queryRunner.commitTransaction();
-      this.logger.log(`Payment failed for booking ${bookingId}. Booking cancelled and capacity released.`);
-      
+      this.logger.log(
+        `Thanh toán thất bại cho đặt chỗ ${bookingId}. Đã hủy và hoàn lại chỗ.`,
+      );
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Error handling payment failure for booking ${bookingId}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Lỗi khi xử lý thanh toán thất bại cho đặt chỗ ${bookingId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
     } finally {
       await queryRunner.release();
     }

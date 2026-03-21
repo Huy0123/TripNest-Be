@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsBoolean, IsDate, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
-import { DiscountType } from '../entities/promotion.entity';
+import { DiscountType } from '@/enums/discount-type.enum';
 
 export class CreatePromotionDto {
   @IsNotEmpty()

@@ -7,30 +7,28 @@ import {
   IsDateString,
   IsEnum,
   Min,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DepartureStatus } from '@/enums/departure-status.enum';
 
 export class CreateTourSessionDto {
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   tourId: string;
 
   @IsDateString()
   startDate: string;
 
-  @IsInt()
   @Min(1)
   @Type(() => Number)
   capacity: number;
 
-  @IsNumber()
   @Min(0)
   @Type(() => Number)
   adultPrice: number;
 
   @IsOptional()
-  @IsNumber()
   @Min(0)
   @Type(() => Number)
   childrenPrice?: number;
@@ -40,7 +38,6 @@ export class CreateTourSessionDto {
   status?: DepartureStatus;
 
   @IsOptional()
-  @IsInt()
   @Type(() => Number)
   discount?: number;
 }

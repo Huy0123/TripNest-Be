@@ -45,10 +45,6 @@ export class ToursQueryDto {
 
   @IsOptional()
   @IsString()
-  date?: string;
-
-  @IsOptional()
-  @IsString()
   sortBy?: 'price' | 'rating' | 'createdAt';
 
   @IsOptional()
@@ -65,12 +61,5 @@ export class ToursQueryDto {
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
   limit?: number = 10;
-
-  @IsOptional()
-  isPopular?: boolean;
 }

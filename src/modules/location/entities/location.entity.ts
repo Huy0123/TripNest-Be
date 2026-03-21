@@ -1,11 +1,10 @@
+import { Column, Entity, OneToMany, ManyToMany } from 'typeorm';
 import { Tour } from '@/modules/tours/entities/tour.entity';
-import { Column, Entity, OneToMany, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
-@Entity('locations')
-export class Location {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+import { SoftDeleteEntity } from '@/common/soft-delete.entity';
 
-  @Column({unique: true})
+@Entity('locations')
+export class Location extends SoftDeleteEntity {
+  @Column({ unique: true })
   city: string;
 
   @Column()

@@ -23,6 +23,7 @@ import { GoogleDto } from '../auth/dto/google.dto';
 import { UploadService } from '../upload/upload.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from './dto/user-query.dto';
+import { ErrorMessages } from '@/constants/error-messages.constant';
 @Injectable()
 export class UsersService implements OnModuleInit {
   private readonly logger = new Logger(UsersService.name);
@@ -89,13 +90,13 @@ export class UsersService implements OnModuleInit {
     // Nếu user đã tồn tại với Google, thêm local provider
     if (existingUser) {
       if (existingUser.providers?.includes(AuthProvider.LOCAL)) {
-        throw new HttpException('User already exists', HttpStatus.CONFLICT);
+        throw new HttpException(ErrorMessages.AUTH.USER_ALREADY_EXISTS, HttpStatus.CONFLICT);
       }
 
       // User có Google account, thêm local login
       if (password !== confirmPassword) {
         throw new HttpException(
-          'Passwords do not match',
+          ErrorMessages.AUTH.PASSWORD_MISMATCH,
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -122,7 +123,7 @@ export class UsersService implements OnModuleInit {
 
     // Tạo user mới với local provider
     if (password !== confirmPassword) {
-      throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
+      throw new HttpException(ErrorMessages.AUTH.PASSWORD_MISMATCH, HttpStatus.BAD_REQUEST);
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = this.userRepository.create({
@@ -144,7 +145,7 @@ export class UsersService implements OnModuleInit {
     
     const existingUser = await this.userRepository.findOne({ where: { email } });
     if (existingUser) {
-      throw new HttpException('User already exists', HttpStatus.CONFLICT);
+      throw new HttpException(ErrorMessages.AUTH.USER_ALREADY_EXISTS, HttpStatus.CONFLICT);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -159,7 +160,7 @@ export class UsersService implements OnModuleInit {
     });
 
     await this.userRepository.save(newUser);
-    return { id: newUser.id, message: 'User created successfully by admin' };
+    return { id: newUser.id };
   }
 
   // Gửi OTP xác thực
@@ -179,7 +180,7 @@ export class UsersService implements OnModuleInit {
         this.timeResendEmail - (currentTime - Number(cachedData.time)) / 1000,
       );
       throw new HttpException(
-        `Please wait before requesting another verification email: ${remainingTime}s`,
+        ErrorMessages.AUTH.OTP_WAIT(remainingTime),
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -213,12 +214,12 @@ export class UsersService implements OnModuleInit {
     if (!cachedData.success) {
       if (cachedData.retryAfter) {
         throw new HttpException(
-          `Too many failed attempts. Please try again after ${cachedData.retryAfter} seconds`,
+          ErrorMessages.AUTH.OTP_TOO_MANY_ATTEMPTS(cachedData.retryAfter),
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
       throw new HttpException(
-        cachedData.message || 'Invalid OTP',
+        ErrorMessages.AUTH.OTP_INVALID,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -231,9 +232,15 @@ export class UsersService implements OnModuleInit {
     this.logger.log(`End verifying account for ${email}`);
   }
 
-  async findUserById(id: string) {
-    const user = await this.userRepository.findOne({ where: { id } });
-    return user || null;
+  async findUserById(id: string, withRefreshToken = false) {
+    const query = this.userRepository.createQueryBuilder('user')
+      .where('user.id = :id', { id });
+    
+    if (withRefreshToken) {
+      query.addSelect('user.hashedRefreshToken');
+    }
+
+    return await query.getOne();
   }
 
   async createOrUpdateGoogleUser(data: GoogleDto) {
@@ -301,7 +308,7 @@ export class UsersService implements OnModuleInit {
       where: { id },
     });
     if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      throw new HttpException(ErrorMessages.NOT_FOUND.USER, HttpStatus.NOT_FOUND);
     }
     return user;
   }
@@ -313,7 +320,7 @@ export class UsersService implements OnModuleInit {
     });
 
     if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      throw new HttpException(ErrorMessages.NOT_FOUND.USER, HttpStatus.NOT_FOUND);
     }
 
     const updatedUser = Object.assign(user, updateUserDto);
@@ -332,7 +339,7 @@ export class UsersService implements OnModuleInit {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+        throw new HttpException(ErrorMessages.NOT_FOUND.USER, HttpStatus.NOT_FOUND);
       }
 
       if (user.avatarPublicId) {
@@ -354,35 +361,33 @@ export class UsersService implements OnModuleInit {
       await this.userRepository.save(user);
 
       this.logger.log(`Avatar uploaded successfully for user ID: ${userId}`);
-      return {
-        message: 'Avatar uploaded successfully',
-        avatar: user.avatar,
-      };
+      return { avatar: user.avatar };
     } catch (error) {
-      this.logger.error(`Error uploading avatar for user ID: ${userId}`, error.message);
-      throw new HttpException('Failed to upload avatar', HttpStatus.INTERNAL_SERVER_ERROR);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Lỗi tải ảnh đại diện cho user ID: ${userId}`, error.message);
+      throw new HttpException(ErrorMessages.UPLOAD.AVATAR_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async remove(id: string) {
-    this.logger.log(`Removing user with ID: ${id}`);
+    this.logger.log(`Xóa người dùng với ID: ${id}`);
     const user = await this.userRepository.findOne({ where: { id } });
     
     if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      throw new HttpException(ErrorMessages.NOT_FOUND.USER, HttpStatus.NOT_FOUND);
     }
 
     if (user.avatarPublicId) {
       try {
         await this.uploadService.deleteImage(user.avatarPublicId);
-        this.logger.log(`Deleted avatar for user ID: ${id} during account removal`);
       } catch (err) {
-        this.logger.warn(`Failed to delete avatar during removal: ${err.message}`);
+        this.logger.warn(`Không thể xóa ảnh đại diện khi xóa tài khoản: ${err.message}`);
       }
     }
 
-    await this.userRepository.remove(user);
-    return { success: true, message: 'User deleted successfully' };
+    // Soft delete — không xóa vĩnh viễn khỏi database
+    await this.userRepository.softRemove(user);
+    return { id };
   }
 
   // Gửi OTP quên mật khẩu
@@ -398,19 +403,19 @@ export class UsersService implements OnModuleInit {
     if (cachedData.time && (currentTime - Number(cachedData.time)) / 1000 < this.timeResendEmail) {
       this.logger.warn(`Attempt to resend forgot password OTP to ${email} too soon`);
       throw new HttpException(
-        `Please wait before requesting another OTP: ${Math.ceil(this.timeResendEmail - (currentTime - Number(cachedData.time)) / 1000)}s`,
+        ErrorMessages.AUTH.OTP_WAIT(Math.ceil(this.timeResendEmail - (currentTime - Number(cachedData.time)) / 1000)),
         HttpStatus.BAD_REQUEST,
       );
     }
 
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      throw new HttpException(ErrorMessages.NOT_FOUND.USER, HttpStatus.NOT_FOUND);
     }
 
     if (!user.providers?.includes(AuthProvider.LOCAL)) {
       throw new HttpException(
-        'This account was registered via Google. Please login with Google.',
+        ErrorMessages.AUTH.GOOGLE_ONLY_ACCOUNT,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -423,11 +428,8 @@ export class UsersService implements OnModuleInit {
       currentTime,
     );
 
-    this.logger.log(`Forgot password OTP sent to ${email}`);
-    return {
-      success: true,
-      message: `OTP has been sent to ${email}`,
-    };
+    this.logger.log(`Gửi OTP quên mật khẩu tới ${email}`);
+    return { email };
   }
 
   // Xác minh OTP quên mật khẩu (chỉ kiểm tra, không xoá OTP)
@@ -443,21 +445,18 @@ export class UsersService implements OnModuleInit {
     if (!cachedData.success) {
       if (cachedData.retryAfter) {
         throw new HttpException(
-          `Too many failed attempts. Please try again after ${cachedData.retryAfter} seconds`,
+          ErrorMessages.AUTH.OTP_TOO_MANY_ATTEMPTS(cachedData.retryAfter),
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
       throw new HttpException(
-        cachedData.message || 'Invalid OTP',
+        ErrorMessages.AUTH.OTP_INVALID,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    this.logger.log(`Forgot password OTP verified successfully for ${email}`);
-    return {
-      success: true,
-      message: 'OTP verified successfully',
-    };
+    this.logger.log(`Xác minh OTP quên mật khẩu thành công cho ${email}`);
+    return { email };
   }
 
   // Xác thực OTP và đặt lại mật khẩu
@@ -473,19 +472,19 @@ export class UsersService implements OnModuleInit {
     if (!cachedData.success) {
       if (cachedData.retryAfter) {
         throw new HttpException(
-          `Too many failed attempts. Please try again after ${cachedData.retryAfter} seconds`,
+          ErrorMessages.AUTH.OTP_TOO_MANY_ATTEMPTS(cachedData.retryAfter),
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
       throw new HttpException(
-        cachedData.message || 'Invalid OTP',
+        ErrorMessages.AUTH.OTP_INVALID,
         HttpStatus.BAD_REQUEST,
       );
     }
 
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      throw new HttpException(ErrorMessages.NOT_FOUND.USER, HttpStatus.NOT_FOUND);
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
@@ -496,11 +495,8 @@ export class UsersService implements OnModuleInit {
       email,
     );
 
-    this.logger.log(`Password reset successfully for ${email}`);
-    return {
-      success: true,
-      message: 'Password has been reset successfully',
-    };
+    this.logger.log(`Đặt lại mật khẩu thành công cho ${email}`);
+    return { email };
   }
 
 }

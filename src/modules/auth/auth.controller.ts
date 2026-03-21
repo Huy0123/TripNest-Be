@@ -11,17 +11,23 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyForgotPasswordDto } from './dto/verify-forgot-password.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
+import { VerifyAccountDto } from './dto/verify-account.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { Public } from '@/decorators/public.decorator';
 import { Message } from '@/decorators/message.decorator';
 import { Response, Request } from 'express';
 import { LocalAuthGuard } from '@/guards/local-auth.guard';
 import { RefreshJwt } from '@/guards/refresh-jwt.guard';
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
   @Post('register')
   @Public()
-  @Message('Registration successful.')
+  @Message('Đăng ký tài khoản thành công')
   create(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
@@ -29,15 +35,15 @@ export class AuthController {
   @Post('login')
   @Public()
   @UseGuards(LocalAuthGuard)
-  @Message('Login successful.')
+  @Message('Đăng nhập thành công')
   login(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const rememberMe = req.body.rememberMe === true;
+    const rememberMe = (req.body as any).rememberMe === true;
     return this.authService.login(req.user, res, rememberMe);
   }
 
   @Post('logout')
   @UseGuards(RefreshJwt)
-  @Message('Logout successful.')
+  @Message('Đăng xuất thành công')
   logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const userId = (req.user as any)?.id;
     return this.authService.logout(userId, res);
@@ -45,9 +51,9 @@ export class AuthController {
 
   @Post('google')
   @Public()
-  @Message('Google login successful.')
+  @Message('Đăng nhập Google thành công')
   async googleAuth(
-    @Body() body: { idToken: string },
+    @Body() body: GoogleAuthDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.googleLogin(body.idToken, res);
@@ -55,35 +61,38 @@ export class AuthController {
 
   @Post('verify-account')
   @Public()
-  @Message('Account verified successfully.')
-  verifyAccount(@Body() body: { email: string; otp: string }) {
+  @Message('Xác thực tài khoản thành công')
+  verifyAccount(@Body() body: VerifyAccountDto) {
     return this.authService.verifyAccount(body.email, body.otp);
   }
 
-  @Post('resend-verification-email')
+  @Post('resend-verification')
   @Public()
-  @Message('Verification email resent successfully.')
-  resendVerificationEmail(@Body('email') email: string) {
-    return this.authService.resendVerificationEmail(email);
+  @Message('Đã gửi lại email xác thực')
+  resendVerificationEmail(@Body() body: ResendVerificationDto) {
+    return this.authService.resendVerificationEmail(body.email);
   }
 
   @Post('forgot-password')
   @Public()
-  @Message('Forgot password OTP sent successfully.')
-  forgotPassword(@Body('email') email: string) {
-    return this.authService.forgotPassword(email);
+  @Message('Đã gửi OTP về email')
+  forgotPassword(@Body() body: ForgotPasswordDto) {
+    return this.authService.forgotPassword(body.email);
   }
 
   @Post('verify-forgot-password')
   @Public()
-  @Message('OTP verified successfully.')
+  @Message('Xác minh OTP thành công')
   verifyForgotPassword(@Body() verifyDto: VerifyForgotPasswordDto) {
-    return this.authService.verifyForgotPasswordOtp(verifyDto.email, verifyDto.otp);
+    return this.authService.verifyForgotPasswordOtp(
+      verifyDto.email,
+      verifyDto.otp,
+    );
   }
 
   @Post('reset-password')
   @Public()
-  @Message('Password reset successfully.')
+  @Message('Đặt lại mật khẩu thành công')
   resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(
       resetPasswordDto.email,
@@ -95,9 +104,12 @@ export class AuthController {
 
   @Post('refresh')
   @Public()
-  @Message('Token refreshed successfully.')
   @UseGuards(RefreshJwt)
-  refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    return this.authService.handleRefreshToken(req.user, res);
+  @Message('Làm mới phiên đăng nhập thành công')
+  async refreshToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.authService.handleRefreshToken(req.user, res);
   }
 }

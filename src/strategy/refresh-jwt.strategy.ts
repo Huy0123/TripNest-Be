@@ -35,7 +35,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
         HttpStatus.UNAUTHORIZED,
       );
     }
-    const user = await this.authService.findUserById(payload.id);
+    const user = await this.authService.findUserById(payload.id, true);
     if (!user || !user.hashedRefreshToken) {
       throw new HttpException('User not found or logged out', HttpStatus.UNAUTHORIZED);
     }

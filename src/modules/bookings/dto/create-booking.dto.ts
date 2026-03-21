@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsUUID, Min, Max, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsUUID, Min, Max, IsOptional, IsString, IsEmail } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBookingDto {
@@ -6,6 +6,11 @@ export class CreateBookingDto {
   @IsNotEmpty()
   @IsUUID()
   sessionId: string;
+
+  @ApiProperty({ description: 'Tour ID' })
+  @IsNotEmpty()
+  @IsUUID()
+  tourId: string;
 
   @ApiProperty({ minimum: 0, maximum: 50 })
   @IsInt()
@@ -24,4 +29,19 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   promoCode?: string;
+
+  @ApiProperty({ description: 'Tên khách hàng' })
+  @IsNotEmpty()
+  @IsString()
+  customerName: string;
+
+  @ApiProperty({ description: 'Email khách hàng' })
+  @IsNotEmpty()
+  @IsEmail()
+  customerEmail: string;
+
+  @ApiProperty({ description: 'Số điện thoại khách hàng' })
+  @IsNotEmpty()
+  @IsString()
+  customerPhone: string;
 }

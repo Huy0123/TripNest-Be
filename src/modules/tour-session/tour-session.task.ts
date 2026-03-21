@@ -20,7 +20,6 @@ export class TourSessionTask {
     this.logger.log('Starting automated tour session status updates...');
     const now = dayjs();
 
-    // 1. Chuyển OPEN -> CLOSED nếu cách startDate < 24h (Tùy chính sách)
     const twentyFourHoursFromNow = now.add(24, 'hour').toDate();
     await this.tourSessionRepository
       .createQueryBuilder()
@@ -30,25 +29,20 @@ export class TourSessionTask {
       .andWhere('startDate <= :limit', { limit: twentyFourHoursFromNow })
       .execute();
 
-    // 2. Chuyển bất kỳ trạng thái nào (OPEN/CLOSED/SOLDOUT) -> IN_PROGRESS khi đến giờ khởi hành
     const currentSessions = await this.tourSessionRepository.find({
       where: {
-        status: DepartureStatus.OPEN, // Hoặc CLOSED/SOLDOUT
+        status: DepartureStatus.OPEN, 
         startDate: LessThanOrEqual(now.toDate()),
       },
     });
 
-    // Cập nhật lên IN_PROGRESS cho các session đã đến giờ khởi hành
     if (currentSessions.length > 0) {
       await this.tourSessionRepository.update(
         currentSessions.map(s => s.id),
         { status: DepartureStatus.IN_PROGRESS }
       );
     }
-
-    // 3. Chuyển IN_PROGRESS -> COMPLETED khi kết thúc tour
-    // Cần join với Tour để lấy duration
-    const inProgressSessions = await this.tourSessionRepository.find({
+const inProgressSessions = await this.tourSessionRepository.find({
       where: { status: DepartureStatus.IN_PROGRESS },
       relations: ['tour'],
     });

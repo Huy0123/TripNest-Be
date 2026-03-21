@@ -18,11 +18,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
+    const exceptionResponse =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : { message: exception.message };
+
+    const message =
+      typeof exceptionResponse === 'object' && exceptionResponse !== null
+        ? (exceptionResponse as any).message || exception.message
+        : exceptionResponse || exception.message;
+
     response.status(status).json({
       success: false,
-      message: exception.message || 'Internal server error',
+      message,
       path: request.url,
       statusCode: status,
+      timestamp: new Date().toISOString(),
     });
   }
 }

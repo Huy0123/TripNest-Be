@@ -1,18 +1,7 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
 
-export class MoreInfoDto {
-  @IsString()
-  title: string;
 
-  @IsOptional()
-  @IsString()
-  subtitle?: string;
-
-  @IsArray()
-  @IsString({ each: true })
-  items: string[];
-}
 
 export class ItineraryItemDto {
   @IsString()
@@ -35,11 +24,19 @@ export class TourImageDto {
 }
 
 export class CreateTourDetailDto {
+  
+  @IsString()
+  tourId: string;
+
   @IsOptional()
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MoreInfoDto)
-  moreInfo?: MoreInfoDto[];
+  @IsString({ each: true })
+  inclusions?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  exclusions?: string[];
 
   @IsOptional()
   @IsString()

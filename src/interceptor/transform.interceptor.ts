@@ -30,7 +30,6 @@ export class TransformInterceptor<T>
         const message =
           this.reflector.get<string>('message', context.getHandler()) || null;
 
-        // Nếu res đã có trường data (thường là kết quả phân trang), ta spread nó ra
         if (res && typeof res === 'object' && 'data' in res) {
           return {
             success: true,
@@ -40,7 +39,6 @@ export class TransformInterceptor<T>
           };
         }
 
-        // Ngược lại, ta bọc kết quả vào trường data
         return {
           success: true,
           statusCode,
